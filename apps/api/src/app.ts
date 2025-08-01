@@ -5,8 +5,13 @@ import morgan from "morgan";
 import { auth } from "./auth";
 import authRoutes from "./routes/auth";
 import { config } from "./config";
+import { emailWorker } from "./queues/emailQueue";
+import { EmailService } from "./services/emailService";
 
 const app = express();
+
+const emailService = new EmailService();
+emailService.testConnection();
 
 // Middleware
 app.use(helmet());
@@ -41,5 +46,11 @@ app.use(
         res.status(500).json({ error: "Something went wrong!" });
     }
 );
+
+process.on("SIGTERM", async () => {
+    console.log("Shutting down email worker...");
+    await emailWorker.close();
+    process.exit(0);
+});
 
 export default app;

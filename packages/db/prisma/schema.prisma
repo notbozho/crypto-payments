@@ -11,19 +11,34 @@ model Seller {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
-  passwordHash  String    // For authentication
+  passwordHash  String
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
-  // Auth relations
   sessions      Session[]
   accounts      Account[]
   
-  // Business relations
   paymentLinks  PaymentLink[]
+
+  emailTokens   EmailToken[]
   
   @@map("sellers")
+}
+
+model EmailToken {
+  id        String   @id @default(cuid())
+  sellerId  String
+  email     String
+  token     String   @unique
+  type      String   // 'email-verification' | 'password-reset'
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  @@map("email_tokens")
 }
 
 model Account {
