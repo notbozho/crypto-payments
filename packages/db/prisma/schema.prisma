@@ -30,7 +30,13 @@ model EmailToken {
   id        String   @id @default(cuid())
   sellerId  String
   email     String
-  token     String   @unique
+
+  // For email links (password reset)
+  token     String?   @unique
+  
+  // For 6-digit codes (email verification)
+  code      String?
+
   type      String   // 'email-verification' | 'password-reset'
   expiresAt DateTime
   used      Boolean  @default(false)

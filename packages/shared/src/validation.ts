@@ -36,7 +36,7 @@ export const loginSchema = z.object({
 });
 
 export const verifyEmailSchema = z.object({
-    token: z.string().min(1, "Token is required"),
+    code: z.string().min(6, "Code is required"),
 });
 
 export const resendVerificationSchema = z.object({

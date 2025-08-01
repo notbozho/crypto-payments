@@ -4,33 +4,44 @@ import { prisma } from "@crypto-payments/db";
 import crypto from "crypto";
 
 export class TokenService {
+    private static readonly CODE_EXPIRY_MINUTES = 15;
+
     // Generate email verification token
-    static async generateEmailVerificationToken(
+    static async generateEmailVerificationCode(
         sellerId: string,
         email: string
     ) {
-        // Create a secure random token
-        const tokenValue = crypto.randomBytes(32).toString("hex");
+        // Invalidate any existing verification tokens
+        await prisma.emailToken.updateMany({
+            where: {
+                sellerId,
+                type: "email-verification",
+                used: false,
+                code: { not: null },
+            },
+            data: { used: true },
+        });
 
-        // Store in database with expiration (24 hours)
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const code = this.generateSixDigitCode();
+        const expiresAt = new Date(
+            Date.now() + this.CODE_EXPIRY_MINUTES * 60 * 1000
+        );
 
         const emailToken = await prisma.emailToken.create({
             data: {
                 sellerId,
                 email,
-                token: tokenValue,
+                code,
                 type: "email-verification",
                 expiresAt,
             },
         });
 
-        return emailToken.token;
+        return emailToken.code;
     }
 
     // Generate password reset token
     static async generatePasswordResetToken(sellerId: string, email: string) {
-        // Invalidate any existing password reset tokens
         await prisma.emailToken.updateMany({
             where: {
                 sellerId,
@@ -57,26 +68,26 @@ export class TokenService {
         return emailToken.token;
     }
 
-    static async verifyEmailToken(token: string) {
-        const emailToken = await prisma.emailToken.findUnique({
-            where: { token },
+    static async verifyEmailCode(code: string) {
+        const emailToken = await prisma.emailToken.findFirst({
+            where: { code },
             include: { seller: true },
         });
 
         if (!emailToken) {
-            throw new Error("Invalid token");
+            throw new Error("Invalid code");
         }
 
         if (emailToken.used) {
-            throw new Error("Token already used");
+            throw new Error("Code already used");
         }
 
         if (emailToken.expiresAt < new Date()) {
-            throw new Error("Token expired");
+            throw new Error("Code expired");
         }
 
         if (emailToken.type !== "email-verification") {
-            throw new Error("Invalid token type");
+            throw new Error("Invalid code type");
         }
 
         // Mark token as used
@@ -125,6 +136,23 @@ export class TokenService {
         await prisma.emailToken.update({
             where: { id: tokenId },
             data: { used: true },
+        });
+    }
+
+    private static generateSixDigitCode(): string {
+        let code = "";
+        for (let i = 0; i < 6; i++) {
+            code += crypto.randomInt(0, 10).toString();
+        }
+        return code;
+    }
+
+    static async cleanupExpiredCodes() {
+        await prisma.emailToken.deleteMany({
+            where: {
+                expiresAt: { lt: new Date() },
+                used: false,
+            },
         });
     }
 }

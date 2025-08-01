@@ -51,12 +51,17 @@ router.post("/register", validateBody(registerSchema), async (req, res) => {
             },
         });
 
-        // Generate verification token
-        const verificationToken =
-            await TokenService.generateEmailVerificationToken(seller.id, email);
+        const verificationCode =
+            await TokenService.generateEmailVerificationCode(seller.id, email);
 
-        // Queue verification email
-        await addEmailVerificationJob(email, verificationToken);
+        if (!verificationCode) {
+            return res.status(500).json({
+                error: "Failed to generate verification code",
+            });
+        }
+
+        // Queue verification email with code
+        await addEmailVerificationJob(email, verificationCode, true);
 
         res.status(201).json({
             message:
@@ -67,6 +72,7 @@ router.post("/register", validateBody(registerSchema), async (req, res) => {
                 name: seller.name,
                 emailVerified: false,
             },
+            codeExpiresIn: 15 * 60, // 15 minutes in seconds
         });
     } catch (error) {
         console.error("Registration error:", error);
@@ -74,15 +80,66 @@ router.post("/register", validateBody(registerSchema), async (req, res) => {
     }
 });
 
+// Resend verification email
+router.post(
+    "/resend-code",
+    validateBody(resendVerificationSchema),
+    async (req, res) => {
+        try {
+            const { email }: ResendVerificationInput = req.body;
+
+            const seller = await prisma.seller.findUnique({
+                where: { email },
+            });
+
+            if (!seller) {
+                return res.status(404).json({
+                    error: "No account found with this email address.",
+                });
+            }
+
+            if (seller.emailVerified) {
+                return res
+                    .status(400)
+                    .json({ error: "Email address is already verified." });
+            }
+
+            // Generate new verification token
+            const verificationToken =
+                await TokenService.generateEmailVerificationCode(
+                    seller.id,
+                    email
+                );
+
+            if (!verificationToken) {
+                return res.status(500).json({
+                    error: "Failed to generate verification token.",
+                });
+            }
+
+            // Queue verification email
+            await addEmailVerificationJob(email, verificationToken, true);
+
+            res.json({
+                message: "New verification code sent! Please check your email.",
+                codeExpiresIn: 15 * 60, // 15 minutes in seconds
+            });
+        } catch (error) {
+            console.error("Resend verification error:", error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    }
+);
+
 // Email verification endpoint
 router.post(
-    "/verify-email",
+    "/verify-code",
     validateBody(verifyEmailSchema),
     async (req, res) => {
         try {
-            const { token }: VerifyEmailInput = req.body;
+            const { code }: VerifyEmailInput = req.body;
 
-            const seller = await TokenService.verifyEmailToken(token);
+            const seller = await TokenService.verifyEmailCode(code);
 
             res.json({
                 message:
@@ -98,12 +155,12 @@ router.post(
             console.error("Email verification error:", error);
 
             const errorMessages = {
-                "Invalid token":
-                    "The verification link is invalid or has been tampered with.",
-                "Token already used":
-                    "This verification link has already been used.",
-                "Token expired":
-                    "The verification link has expired. Please request a new one.",
+                "Invalid code":
+                    "The code you entered is incorrect. Please try again.",
+                "Code already used":
+                    "This code has already been used. Please request a new one.",
+                "Code expired":
+                    "This code has expired. Please request a new one.",
             };
 
             const message =
@@ -140,6 +197,12 @@ router.post(
                 seller.id,
                 email
             );
+
+            if (!resetToken) {
+                return res.status(500).json({
+                    error: "Failed to generate password reset token",
+                });
+            }
 
             // Queue password reset email
             await addPasswordResetJob(email, resetToken);
@@ -197,50 +260,6 @@ router.post(
                 "Password reset failed. Please try again.";
 
             res.status(400).json({ error: message });
-        }
-    }
-);
-
-// Resend verification email
-router.post(
-    "/resend-verification",
-    validateBody(resendVerificationSchema),
-    async (req, res) => {
-        try {
-            const { email }: ResendVerificationInput = req.body;
-
-            const seller = await prisma.seller.findUnique({
-                where: { email },
-            });
-
-            if (!seller) {
-                return res.status(404).json({
-                    error: "No account found with this email address.",
-                });
-            }
-
-            if (seller.emailVerified) {
-                return res
-                    .status(400)
-                    .json({ error: "Email address is already verified." });
-            }
-
-            // Generate new verification token
-            const verificationToken =
-                await TokenService.generateEmailVerificationToken(
-                    seller.id,
-                    email
-                );
-
-            // Queue verification email
-            await addEmailVerificationJob(email, verificationToken);
-
-            res.json({
-                message: "Verification email sent! Please check your inbox.",
-            });
-        } catch (error) {
-            console.error("Resend verification error:", error);
-            res.status(500).json({ error: "Internal server error" });
         }
     }
 );

@@ -13,7 +13,8 @@ export const emailQueue = new Queue("email", { connection });
 export interface EmailVerificationJob {
     type: "email-verification";
     email: string;
-    token: string;
+    codeOrToken: string;
+    isCode: boolean;
 }
 
 export interface PasswordResetJob {
@@ -38,7 +39,8 @@ export const emailWorker = new Worker<EmailJobData>(
                 case "email-verification":
                     await emailService.sendVerificationEmail(
                         job.data.email,
-                        job.data.token
+                        job.data.codeOrToken,
+                        job.data.isCode
                     );
                     break;
                 case "password-reset":
@@ -79,10 +81,14 @@ emailWorker.on("error", (err) => {
     console.error("Email worker error:", err);
 });
 
-export const addEmailVerificationJob = async (email: string, token: string) => {
+export const addEmailVerificationJob = async (
+    email: string,
+    codeOrToken: string,
+    isCode: boolean = false
+) => {
     return await emailQueue.add(
         "email-verification",
-        { type: "email-verification", email, token },
+        { type: "email-verification", email, codeOrToken, isCode },
         {
             attempts: 3,
             backoff: {
