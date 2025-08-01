@@ -6,48 +6,56 @@ import {
     addEmailVerificationJob,
     addPasswordResetJob,
 } from "../queues/emailQueue";
+import { validateBody } from "../middleware/validation";
+import {
+    registerSchema,
+    verifyEmailSchema,
+    resendVerificationSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+    type RegisterInput,
+    type VerifyEmailInput,
+    type ResendVerificationInput,
+    type ForgotPasswordInput,
+    type ResetPasswordInput,
+} from "@crypto-payments/shared";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
+// Registration endpoint with validation
+router.post("/register", validateBody(registerSchema), async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, name }: RegisterInput = req.body;
 
-        // Validation
-        if (!email || !password) {
-            return res
-                .status(400)
-                .json({ error: "Email and password required" });
-        }
-
-        if (password.length < 6) {
-            return res
-                .status(400)
-                .json({ error: "Password must be at least 6 characters" });
-        }
-
+        // Check if seller exists
         const existingSeller = await prisma.seller.findUnique({
             where: { email },
         });
 
         if (existingSeller) {
-            return res.status(409).json({ error: "Seller already exists" });
+            return res.status(409).json({
+                error: "An account with this email already exists",
+            });
         }
 
+        // Hash password
         const passwordHash = await bcrypt.hash(password, 12);
 
+        // Create seller (not verified yet)
         const seller = await prisma.seller.create({
             data: {
                 email,
                 passwordHash,
-                name,
+                name: name || null,
                 emailVerified: null,
             },
         });
 
+        // Generate verification token
         const verificationToken =
             await TokenService.generateEmailVerificationToken(seller.id, email);
 
+        // Queue verification email
         await addEmailVerificationJob(email, verificationToken);
 
         res.status(201).json({
@@ -66,149 +74,175 @@ router.post("/register", async (req, res) => {
     }
 });
 
-router.post("/verify-email", async (req, res) => {
-    try {
-        const { token } = req.body;
+// Email verification endpoint
+router.post(
+    "/verify-email",
+    validateBody(verifyEmailSchema),
+    async (req, res) => {
+        try {
+            const { token }: VerifyEmailInput = req.body;
 
-        if (!token) {
-            return res.status(400).json({ error: "Token required" });
-        }
+            const seller = await TokenService.verifyEmailToken(token);
 
-        const seller = await TokenService.verifyEmailToken(token);
-
-        res.json({
-            message: "Email verified successfully",
-            seller: {
-                id: seller.id,
-                email: seller.email,
-                name: seller.name,
-                emailVerified: true,
-            },
-        });
-    } catch (error: any) {
-        console.error("Email verification error:", error);
-
-        if (
-            error.message === "Invalid token" ||
-            error.message === "Token already used" ||
-            error.message === "Token expired"
-        ) {
-            return res.status(400).json({ error: error.message });
-        }
-
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-router.post("/forgot-password", async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ error: "Email required" });
-        }
-
-        const seller = await prisma.seller.findUnique({
-            where: { email },
-        });
-
-        if (!seller) {
-            return res.json({
+            res.json({
                 message:
-                    "If an account with that email exists, a password reset link has been sent.",
+                    "Email verified successfully! You can now sign in to your account.",
+                seller: {
+                    id: seller.id,
+                    email: seller.email,
+                    name: seller.name,
+                    emailVerified: true,
+                },
             });
+        } catch (error: any) {
+            console.error("Email verification error:", error);
+
+            const errorMessages = {
+                "Invalid token":
+                    "The verification link is invalid or has been tampered with.",
+                "Token already used":
+                    "This verification link has already been used.",
+                "Token expired":
+                    "The verification link has expired. Please request a new one.",
+            };
+
+            const message =
+                errorMessages[error.message as keyof typeof errorMessages] ||
+                "Verification failed. Please try again.";
+
+            res.status(400).json({ error: message });
         }
-
-        const resetToken = await TokenService.generatePasswordResetToken(
-            seller.id,
-            email
-        );
-
-        await addPasswordResetJob(email, resetToken);
-
-        res.json({
-            message:
-                "If an account with that email exists, a password reset link has been sent.",
-        });
-    } catch (error) {
-        console.error("Forgot password error:", error);
-        res.status(500).json({ error: "Internal server error" });
     }
-});
+);
 
-router.post("/reset-password", async (req, res) => {
-    try {
-        const { token, newPassword } = req.body;
+// Forgot password endpoint
+router.post(
+    "/forgot-password",
+    validateBody(forgotPasswordSchema),
+    async (req, res) => {
+        try {
+            const { email }: ForgotPasswordInput = req.body;
 
-        if (!token || !newPassword) {
-            return res
-                .status(400)
-                .json({ error: "Token and new password required" });
+            const seller = await prisma.seller.findUnique({
+                where: { email },
+            });
+
+            // Always return success to prevent email enumeration
+            const successMessage =
+                "If an account with that email exists, we've sent you a password reset link.";
+
+            if (!seller) {
+                return res.json({ message: successMessage });
+            }
+
+            // Generate reset token
+            const resetToken = await TokenService.generatePasswordResetToken(
+                seller.id,
+                email
+            );
+
+            // Queue password reset email
+            await addPasswordResetJob(email, resetToken);
+
+            res.json({ message: successMessage });
+        } catch (error) {
+            console.error("Forgot password error:", error);
+            res.status(500).json({ error: "Internal server error" });
         }
-
-        if (newPassword.length < 6) {
-            return res
-                .status(400)
-                .json({ error: "Password must be at least 6 characters" });
-        }
-
-        const emailToken = await TokenService.verifyPasswordResetToken(token);
-
-        const passwordHash = await bcrypt.hash(newPassword, 12);
-
-        await prisma.seller.update({
-            where: { id: emailToken.sellerId },
-            data: { passwordHash },
-        });
-
-        await TokenService.markPasswordResetTokenUsed(emailToken.id);
-
-        res.json({ message: "Password reset successfully" });
-    } catch (error: any) {
-        console.error("Reset password error:", error);
-
-        if (
-            error.message === "Invalid token" ||
-            error.message === "Token already used" ||
-            error.message === "Token expired"
-        ) {
-            return res.status(400).json({ error: error.message });
-        }
-
-        res.status(500).json({ error: "Internal server error" });
     }
-});
+);
 
-router.post("/resend-verification", async (req, res) => {
-    try {
-        const { email } = req.body;
+// Reset password endpoint
+router.post(
+    "/reset-password",
+    validateBody(resetPasswordSchema),
+    async (req, res) => {
+        try {
+            const { token, newPassword }: ResetPasswordInput = req.body;
 
-        if (!email) {
-            return res.status(400).json({ error: "Email required" });
+            const emailToken = await TokenService.verifyPasswordResetToken(
+                token
+            );
+
+            // Hash new password
+            const passwordHash = await bcrypt.hash(newPassword, 12);
+
+            // Update seller password
+            await prisma.seller.update({
+                where: { id: emailToken.sellerId },
+                data: { passwordHash },
+            });
+
+            // Mark token as used
+            await TokenService.markPasswordResetTokenUsed(emailToken.id);
+
+            res.json({
+                message:
+                    "Password has been reset successfully. You can now sign in with your new password.",
+            });
+        } catch (error: any) {
+            console.error("Reset password error:", error);
+
+            const errorMessages = {
+                "Invalid token":
+                    "The password reset link is invalid or has been tampered with.",
+                "Token already used":
+                    "This password reset link has already been used.",
+                "Token expired":
+                    "The password reset link has expired. Please request a new one.",
+            };
+
+            const message =
+                errorMessages[error.message as keyof typeof errorMessages] ||
+                "Password reset failed. Please try again.";
+
+            res.status(400).json({ error: message });
         }
-
-        const seller = await prisma.seller.findUnique({
-            where: { email },
-        });
-
-        if (!seller) {
-            return res.status(404).json({ error: "Seller not found" });
-        }
-
-        if (seller.emailVerified) {
-            return res.status(400).json({ error: "Email already verified" });
-        }
-
-        const verificationToken =
-            await TokenService.generateEmailVerificationToken(seller.id, email);
-
-        await addEmailVerificationJob(email, verificationToken);
-
-        res.json({ message: "Verification email sent" });
-    } catch (error) {
-        console.error("Resend verification error:", error);
-        res.status(500).json({ error: "Internal server error" });
     }
-});
+);
+
+// Resend verification email
+router.post(
+    "/resend-verification",
+    validateBody(resendVerificationSchema),
+    async (req, res) => {
+        try {
+            const { email }: ResendVerificationInput = req.body;
+
+            const seller = await prisma.seller.findUnique({
+                where: { email },
+            });
+
+            if (!seller) {
+                return res.status(404).json({
+                    error: "No account found with this email address.",
+                });
+            }
+
+            if (seller.emailVerified) {
+                return res
+                    .status(400)
+                    .json({ error: "Email address is already verified." });
+            }
+
+            // Generate new verification token
+            const verificationToken =
+                await TokenService.generateEmailVerificationToken(
+                    seller.id,
+                    email
+                );
+
+            // Queue verification email
+            await addEmailVerificationJob(email, verificationToken);
+
+            res.json({
+                message: "Verification email sent! Please check your inbox.",
+            });
+        } catch (error) {
+            console.error("Resend verification error:", error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    }
+);
 
 export default router;

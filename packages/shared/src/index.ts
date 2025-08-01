@@ -3,6 +3,7 @@ import { ChainType } from "./types";
 
 export * from "./types";
 export * from "./constants";
+export * from "./validation";
 
 export const getTokenByAddress = (chainType: ChainType, address: string) => {
     return SUPPORTED_TOKENS[chainType].find(
