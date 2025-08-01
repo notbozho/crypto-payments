@@ -1,0 +1,37 @@
+{
+  "name": "crypto-payments",
+  "private": true,
+  "keywords": [
+    "crypto",
+    "payments",
+    "web3",
+    "receive",
+    "sell"
+  ],
+  "author": "Bozhidar Ivanov",
+  "license": "MIT",
+  "description": "Cryptocurrency payment processor",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@types/node": "^24.1.0",
+    "concurrently": "^9.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "typescript": "^5.9.2"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "commit": "cz",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "test": "echo \"No tests yet\"",
+    "build:db": "npm run build --workspace=packages/db",
+    "build": "npm run build:db && npm run build --workspace=apps/web && npm run build --workspace=apps/api",
+    "prepare": "husky"
+  }
+}

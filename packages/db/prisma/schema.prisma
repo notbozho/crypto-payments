@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Seller {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String    // For authentication
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Auth relations
+  sessions      Session[]
+  accounts      Account[]
+  
+  // Business relations
+  paymentLinks  PaymentLink[]
+  
+  @@map("sellers")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  sellerId          String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  sellerId     String
+  expires      DateTime
+  
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PaymentLink {
+  id            String      @id @default(cuid())
+  sellerId      String
+  amount        String      // BigInt as string for precision
+  tokenAddress  String      // '0x0' for native tokens
+  chainType     String      // ChainType enum
+  description   String?
+  
+  // Derived wallet for this payment
+  walletAddress String      @unique
+  privateKey    String      // Encrypted with app secret
+  derivationPath String     // HD wallet path like m/44'/60'/0'/0/123
+  
+  status        String      @default("pending") // PaymentStatus enum
+  expiresAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  seller        Seller      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  
+  @@map("payment_links")
+}
+
+model Transaction {
+  id              String    @id @default(cuid())
+  paymentLinkId   String
+  
+  // Transaction details
+  txHash          String?   @unique
+  fromAddress     String
+  toAddress       String
+  amount          String    // Actual amount received
+  tokenAddress    String
+  chainType       String
+  
+  // Blockchain data
+  blockNumber     Int?
+  gasUsed         String?
+  gasPrice        String?
+  
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+  confirmedAt     DateTime?
+  
+  // Relations
+  paymentLink     PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  
+  @@map("transactions")
+}
+
+model WalletDerivation {
+  id             String   @id @default(cuid())
+  derivationPath String   @unique
+  walletAddress  String   @unique
+  isUsed         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  
+  @@map("wallet_derivations")
+}
+
+model ChainState {
+  id            String   @id @default(cuid())
+  chainType     String   @unique
+  lastBlock     Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  
+  @@map("chain_states")
+}
