@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { auth } from "./auth";
 import authRoutes from "./routes/auth";
+import totpRoutes from "./routes/totp";
 import { config } from "./config";
 import { emailWorker } from "./queues/emailQueue";
 import { EmailService } from "./services/emailService";
@@ -33,6 +34,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", auth);
 app.use("/api", authRoutes);
+app.use("/api/totp", totpRoutes);
 
 // Error handler
 app.use(

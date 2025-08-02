@@ -6,12 +6,16 @@ import { Progress } from "@/components/ui/progress";
 import { GalleryVerticalEnd } from "lucide-react";
 import { RegisterStep } from "./steps/RegisterStep";
 import { VerifyEmailStep } from "./steps/VerifyEmailStep";
+import TwoFactorSetupStep from "./steps/TwoFactorSetupStep";
+import BackupCodesStep from "./steps/BackupCodesStep";
+import RegistrationCompleteStep from "./steps/RegistrationCompleteStep";
 
 const STEP_LABELS = {
     register: "Create Account",
     "verify-email": "Verify Email",
     "connect-wallet": "Connect Wallet",
     "2fa-setup": "Security Setup",
+    "backup-codes": "Backup Codes",
     complete: "Complete",
 };
 
@@ -20,16 +24,15 @@ const STEP_PROGRESS = {
     "verify-email": 40,
     "connect-wallet": 60,
     "2fa-setup": 80,
+    "backup-codes": 90,
     complete: 100,
 };
 
 export function RegistrationFlow() {
     const { currentStep, reset } = useRegistrationFlowStore();
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            // Don't reset if user is just navigating around
             // reset();
         };
     }, []);
@@ -43,9 +46,11 @@ export function RegistrationFlow() {
             case "connect-wallet":
                 return <div>Connect Wallet Step (Coming soon)</div>;
             case "2fa-setup":
-                return <div>2FA Setup Step (Coming soon)</div>;
+                return <TwoFactorSetupStep />;
+            case "backup-codes":
+                return <BackupCodesStep />;
             case "complete":
-                return <div>Complete Step (Coming soon)</div>;
+                return <RegistrationCompleteStep />;
             default:
                 return <RegisterStep />;
         }
