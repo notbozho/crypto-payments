@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useAuthStore } from "./auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -149,7 +150,10 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                                 verificationAttempts: 0,
                             });
 
-                            // Start code expiration timer
+                            await useAuthStore
+                                .getState()
+                                .login(email, password);
+
                             get().startCodeTimer(data.codeExpiresIn || 900); // 15 minutes default
                             get().startResendCooldown(60); // 60 second cooldown
 

@@ -1,6 +1,6 @@
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
-import { prisma } from "@crypto-payments/db";
+import { Prisma, prisma } from "@crypto-payments/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -47,7 +47,7 @@ export class TOTPService {
             backupCodes.map((code) => bcrypt.hash(code, 12))
         );
 
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.seller.update({
                 where: { id: sellerId },
                 data: {
@@ -133,7 +133,7 @@ export class TOTPService {
             newCodes.map((code) => bcrypt.hash(code, 12))
         );
 
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.backupCode.deleteMany({
                 where: { sellerId },
             });
@@ -150,7 +150,7 @@ export class TOTPService {
     }
 
     static async disableTOTP(sellerId: string): Promise<void> {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             await tx.seller.update({
                 where: { id: sellerId },
                 data: {
