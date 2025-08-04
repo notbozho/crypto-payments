@@ -29,13 +29,18 @@ export const auth = ExpressAuth({
                     seller.passwordHash
                 );
 
-                return isValid
-                    ? {
-                          id: seller.id,
-                          email: seller.email,
-                          name: seller.name,
-                      }
-                    : null;
+                if (!isValid) return null;
+
+                // if has 2fa
+                if (seller.totpEnabled) {
+                    throw new Error("2FA_REQUIRED");
+                }
+
+                return {
+                    id: seller.id,
+                    email: seller.email,
+                    name: seller.name,
+                };
             },
         }),
     ],

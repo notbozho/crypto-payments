@@ -38,15 +38,15 @@ interface RegistrationFlowState {
     loading: boolean;
     error: string | null;
 
-    // Email verification specific
+    // Email verification
     codeExpiresAt: Date | null;
-    resendCooldown: number; // seconds until can resend
+    resendCooldown: number;
     verificationAttempts: number;
 
-    // 2FA specific
+    // 2FA
     totpSetupData: TOTPSetupData | null;
     has2FA: boolean;
-    skipped2FA: boolean;
+    downloadedBackupCodes: boolean;
 
     // Actions
     setStep: (step: RegistrationStep) => void;
@@ -72,15 +72,14 @@ interface RegistrationFlowState {
     // 2FA actions
     generateTOTPSetup: () => Promise<boolean>;
     verifyAndEnableTOTP: (token: string) => Promise<boolean>;
-    skip2FA: () => void;
     complete2FA: () => void;
+    setDownloadedBackupCodes: (downloaded: boolean) => void;
 
     // Navigation
     goToNextStep: () => void;
     goToPreviousStep: () => void;
     goToStep: (step: RegistrationStep) => void;
 
-    // Cleanup
     reset: () => void;
 
     // Timer management
@@ -117,7 +116,7 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                 verificationAttempts: 0,
                 totpSetupData: null,
                 has2FA: false,
-                skipped2FA: false,
+                downloadedBackupCodes: false,
 
                 // Basic setters
                 setStep: (step) => set({ currentStep: step }),
@@ -154,8 +153,8 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                                 .getState()
                                 .login(email, password);
 
-                            get().startCodeTimer(data.codeExpiresIn || 900); // 15 minutes default
-                            get().startResendCooldown(60); // 60 second cooldown
+                            get().startCodeTimer(data.codeExpiresIn || 15 * 60); // 15 min
+                            get().startResendCooldown(60); // 1 min
 
                             return true;
                         } else {
@@ -171,7 +170,6 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                     }
                 },
 
-                // Verify 6-digit code
                 verifyCode: async (code) => {
                     set({ loading: true, error: null });
 
@@ -187,7 +185,7 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                         if (response.ok) {
                             clearTimers();
                             set({
-                                currentStep: "2fa-setup",
+                                currentStep: "connect-wallet",
                                 codeExpiresAt: null,
                                 resendCooldown: 0,
                             });
@@ -209,7 +207,6 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                     }
                 },
 
-                // Resend verification code
                 resendCode: async () => {
                     const { userData, resendCooldown } = get();
 
@@ -258,7 +255,6 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                     }
                 },
 
-                // Update email (when user wants to change it)
                 updateEmail: (newEmail) => {
                     const { userData } = get();
                     if (userData) {
@@ -391,14 +387,6 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                     }
                 },
 
-                skip2FA: () => {
-                    set({
-                        skipped2FA: true,
-                        currentStep: "complete",
-                        error: null,
-                    });
-                },
-
                 complete2FA: () => {
                     set({
                         has2FA: true,
@@ -406,6 +394,11 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                         error: null,
                     });
                 },
+
+                setDownloadedBackupCodes: (downloaded) => {
+                    set({ downloadedBackupCodes: downloaded });
+                },
+
                 goToNextStep: () => {
                     const { currentStep } = get();
                     const steps: RegistrationStep[] = [
@@ -485,7 +478,7 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                         verificationAttempts: 0,
                         totpSetupData: null,
                         has2FA: false,
-                        skipped2FA: false,
+                        downloadedBackupCodes: false,
                     });
                 },
             };
@@ -498,7 +491,7 @@ export const useRegistrationFlowStore = create<RegistrationFlowState>()(
                 walletData: state.walletData,
                 totpSetupData: state.totpSetupData,
                 has2FA: state.has2FA,
-                skipped2FA: state.skipped2FA,
+                downloadedBackupCodes: state.downloadedBackupCodes,
             }),
         }
     )

@@ -10,7 +10,6 @@ export class TOTPService {
 
     // Generate TOTP secret and setup data
     static async generateTOTPSetup(sellerId: string, sellerEmail: string) {
-        // Generate secret
         const secret = speakeasy.generateSecret({
             name: `${this.APP_NAME} (${sellerEmail})`,
             issuer: this.ISSUER,

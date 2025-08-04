@@ -9,12 +9,13 @@ import { VerifyEmailStep } from "./steps/VerifyEmailStep";
 import TwoFactorSetupStep from "./steps/TwoFactorSetupStep";
 import BackupCodesStep from "./steps/BackupCodesStep";
 import RegistrationCompleteStep from "./steps/RegistrationCompleteStep";
+import ConnectWalletStep from "./steps/ConnectWalletStep";
 
 const STEP_LABELS = {
     register: "Create Account",
     "verify-email": "Verify Email",
     "connect-wallet": "Connect Wallet",
-    "2fa-setup": "Security Setup",
+    "2fa-setup": "2FA Setup",
     "backup-codes": "Backup Codes",
     complete: "Complete",
 };
@@ -44,7 +45,7 @@ export function RegistrationFlow() {
             case "verify-email":
                 return <VerifyEmailStep />;
             case "connect-wallet":
-                return <div>Connect Wallet Step (Coming soon)</div>;
+                return <ConnectWalletStep />;
             case "2fa-setup":
                 return <TwoFactorSetupStep />;
             case "backup-codes":
@@ -87,13 +88,6 @@ export function RegistrationFlow() {
                 <div className="transition-all duration-300 ease-in-out">
                     {renderStep()}
                 </div>
-
-                {/* Debug info (remove in production) */}
-                {process.env.NODE_ENV === "development" && (
-                    <div className="text-xs text-muted-foreground text-center">
-                        Current step: {currentStep}
-                    </div>
-                )}
             </div>
         </div>
     );

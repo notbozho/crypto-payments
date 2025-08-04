@@ -184,7 +184,6 @@ router.post(
                 where: { email },
             });
 
-            // Always return success to prevent email enumeration
             const successMessage =
                 "If an account with that email exists, we've sent you a password reset link.";
 

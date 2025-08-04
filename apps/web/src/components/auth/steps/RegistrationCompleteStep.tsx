@@ -17,17 +17,26 @@ import {
     Wallet,
     Shield,
     User,
+    ArrowLeft,
 } from "lucide-react";
 
-export default function RegistrationCompleteStep() {
+export default function RegistrationComplete() {
     const router = useRouter();
-    const { userData, walletData, has2FA, skipped2FA, reset } =
+    const { userData, walletData, has2FA, setStep, goToPreviousStep, reset } =
         useRegistrationFlowStore();
 
     const handleGoToDashboard = async () => {
         reset();
 
         router.push("/dashboard");
+    };
+
+    const handleGoBack = async () => {
+        if (!has2FA) {
+            setStep("2fa-setup");
+        } else {
+            goToPreviousStep();
+        }
     };
 
     const completedFeatures = [
@@ -67,8 +76,19 @@ export default function RegistrationCompleteStep() {
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-                <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                <div className="flex items-center justify-between mb-4">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleGoBack}
+                        className="p-2"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="w-10" /> {/* Spacer for centering */}
                 </div>
                 <CardTitle className="text-2xl text-green-900">
                     You&apos;re All Set!

@@ -17,14 +17,19 @@ import {
     AlertTriangle,
     ArrowRight,
     CheckCircle,
+    ArrowLeft,
 } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
 
 export default function BackupCodesStep() {
-    const { totpSetupData, userData, goToNextStep } =
-        useRegistrationFlowStore();
-
-    const [savedBackupCodes, setSavedBackupCodes] = useState(false);
+    const {
+        totpSetupData,
+        userData,
+        downloadedBackupCodes,
+        goToNextStep,
+        goToPreviousStep,
+        setDownloadedBackupCodes,
+    } = useRegistrationFlowStore();
 
     const downloadBackupCodes = () => {
         if (!totpSetupData) return;
@@ -65,7 +70,7 @@ export default function BackupCodesStep() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        setSavedBackupCodes(true);
+        setDownloadedBackupCodes(true);
     };
 
     if (!totpSetupData) {
@@ -85,7 +90,18 @@ export default function BackupCodesStep() {
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-                <KeyRound className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                <div className="flex items-center justify-between mb-4">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => goToPreviousStep()}
+                        className="p-2"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <KeyRound className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                    <div className="w-10" />
+                </div>
                 <CardTitle className="text-2xl">
                     Save Your Backup Codes
                 </CardTitle>
@@ -95,7 +111,10 @@ export default function BackupCodesStep() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <Alert>
+                <Alert
+                    variant="destructive"
+                    className="border-red-200 bg-red-50"
+                >
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
                         <strong>Critical:</strong> These backup codes are your
@@ -152,7 +171,7 @@ export default function BackupCodesStep() {
                         </Button>
                     </div>
 
-                    {savedBackupCodes && (
+                    {downloadedBackupCodes && (
                         <Alert className="border-green-200 bg-green-50">
                             <CheckCircle className="h-4 w-4 text-green-600" />
                             <AlertDescription className="text-green-800">
@@ -165,11 +184,11 @@ export default function BackupCodesStep() {
                     <div className="space-y-3">
                         <Button
                             onClick={() => goToNextStep()}
-                            disabled={!savedBackupCodes}
+                            disabled={!downloadedBackupCodes}
                             className="w-full"
                             size="lg"
                         >
-                            {savedBackupCodes ? (
+                            {downloadedBackupCodes ? (
                                 <>
                                     Continue
                                     <ArrowRight className="h-4 w-4 ml-2" />

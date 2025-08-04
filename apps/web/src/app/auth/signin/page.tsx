@@ -87,6 +87,15 @@ export default function SignInPage() {
                         </Button>
                     </form>
 
+                    <div className="mt-4 text-center">
+                        <Link
+                            href="/auth/forgot-password"
+                            className="text-sm text-blue-600 hover:underline"
+                        >
+                            Forgot your password?
+                        </Link>
+                    </div>
+
                     <div className="mt-4 text-center text-sm">
                         Don&apos;t have an account?{" "}
                         <Link

@@ -20,6 +20,7 @@ import {
     Eye,
     EyeOff,
     ArrowRight,
+    ArrowLeft,
 } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
 
@@ -31,7 +32,8 @@ export default function TwoFactorSetupStep() {
         error,
         generateTOTPSetup,
         verifyAndEnableTOTP,
-        skip2FA,
+        goToPreviousStep,
+        setStep,
         setError,
     } = useRegistrationFlowStore();
 
@@ -74,7 +76,18 @@ export default function TwoFactorSetupStep() {
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-                <Shield className="h-8 w-8 mx-auto text-blue-600 mb-2" />
+                <div className="flex items-center justify-between mb-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => goToPreviousStep()}
+                        className="p-2"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Shield className="h-8 w-8 mx-auto text-blue-600 mb-2" />
+                    <div className="w-10" /> {/* Spacer for centering */}
+                </div>
                 <CardTitle className="text-2xl">
                     Set up Two-Factor Authentication
                 </CardTitle>
@@ -199,12 +212,22 @@ export default function TwoFactorSetupStep() {
 
                     <Button
                         variant="ghost"
-                        onClick={() => skip2FA()}
+                        onClick={() => setStep("complete")}
                         className="w-full text-gray-500"
                     >
                         Skip for now
                     </Button>
                 </div>
+
+                {/* User info */}
+                {userData?.email && (
+                    <div className="pt-4 border-t">
+                        <p className="text-xs text-center text-gray-500">
+                            Setting up account for{" "}
+                            <strong>{userData.email}</strong>
+                        </p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

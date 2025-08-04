@@ -89,7 +89,6 @@ export function VerifyEmailStep() {
                 if (pastedCode.length === 6) {
                     const newCode = pastedCode.split("");
                     setCode(newCode);
-                    // Auto-verify pasted code
                     handleVerifyCode(pastedCode);
                 }
             });
@@ -161,7 +160,9 @@ export function VerifyEmailStep() {
                         {code.map((digit, index) => (
                             <Input
                                 key={index}
-                                ref={(el) => { inputRefs.current[index] = el; }}
+                                ref={(el) => {
+                                    inputRefs.current[index] = el;
+                                }}
                                 type="text"
                                 inputMode="numeric"
                                 maxLength={1}
