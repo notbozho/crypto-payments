@@ -22,7 +22,6 @@ export function VerifyEmailStep() {
         verifyCode,
         resendCode,
         updateEmail,
-        goToPreviousStep,
     } = useRegistrationFlowStore();
 
     const [code, setCode] = useState(["", "", "", "", "", ""]);
