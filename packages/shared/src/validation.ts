@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ChainType } from "./types";
 
 // Base schemas
 export const emailSchema = z
@@ -62,6 +63,24 @@ export const passwordConfirmSchema = z
         path: ["confirmPassword"],
     });
 
+export const createPaymentLinkSchema = z.object({
+    amount: z.string().min(1, "Amount is required"),
+    tokenAddress: z.string().min(1, "Token address is required"),
+    chainType: z.nativeEnum(ChainType),
+    description: z.string().max(500).optional(),
+    expiresIn: z
+        .number()
+        .min(1)
+        .max(30 * 24 * 60 * 60)
+        .optional(), // Max 30 days in seconds
+});
+
+export const updateSellerWalletSchema = z.object({
+    walletAddress: z
+        .string()
+        .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address"),
+});
+
 // Type exports
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -70,3 +89,5 @@ export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type PasswordConfirmInput = z.infer<typeof passwordConfirmSchema>;
+export type CreatePaymentLinkInput = z.infer<typeof createPaymentLinkSchema>;
+export type UpdateSellerWalletInput = z.infer<typeof updateSellerWalletSchema>;

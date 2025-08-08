@@ -12,6 +12,7 @@ model Seller {
   email         String    @unique
   name          String?
   passwordHash  String
+  walletAddress String?   // Seller's wallet for receiving payments
   emailVerified DateTime?
 
   totpSecret    String?
@@ -23,9 +24,7 @@ model Seller {
   
   sessions      Session[]
   accounts      Account[]
-  
   paymentLinks  PaymentLink[]
-
   emailTokens   EmailToken[]
   
   @@map("sellers")
@@ -113,10 +112,9 @@ model PaymentLink {
   chainType     String      // ChainType enum
   description   String?
   
-  // Derived wallet for this payment
+  // Generated random wallet for this payment
   walletAddress String      @unique
   privateKey    String      // Encrypted with app secret
-  derivationPath String     // HD wallet path like m/44'/60'/0'/0/123
   
   status        String      @default("pending") // PaymentStatus enum
   expiresAt     DateTime?
@@ -155,16 +153,6 @@ model Transaction {
   paymentLink     PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
   
   @@map("transactions")
-}
-
-model WalletDerivation {
-  id             String   @id @default(cuid())
-  derivationPath String   @unique
-  walletAddress  String   @unique
-  isUsed         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  
-  @@map("wallet_derivations")
 }
 
 model ChainState {

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "@crypto-payments/db";
 import bcrypt from "bcryptjs";
-import { TokenService } from "../services/tokenService";
+import { TokenService } from "../services/token.service";
 import {
     addEmailVerificationJob,
     addPasswordResetJob,

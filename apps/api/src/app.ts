@@ -2,12 +2,13 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import { auth } from "./auth";
-import authRoutes from "./routes/auth";
-import totpRoutes from "./routes/totp";
-import { config } from "./config";
+import authRoutes from "./routes/auth.route";
+import totpRoutes from "./routes/totp.route";
+import paymentRoutes from "./routes/payment.route";
+import { authConfig, config } from "./config";
 import { emailWorker } from "./queues/emailQueue";
-import { EmailService } from "./services/emailService";
+import { EmailService } from "./services/email.service";
+import { ExpressAuth } from "@auth/express";
 
 const app = express();
 
@@ -32,9 +33,11 @@ app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.use("/api/auth", auth);
+app.use("/api/auth", ExpressAuth(authConfig));
 app.use("/api", authRoutes);
 app.use("/api/totp", totpRoutes);
+
+app.use("/api/payments", paymentRoutes);
 
 // Error handler
 app.use(

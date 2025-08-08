@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from "bullmq";
 import { config } from "../config";
-import { EmailService } from "../services/emailService";
+import { EmailService } from "../services/email.service";
 
 const connection = {
     host: config.redis.host,

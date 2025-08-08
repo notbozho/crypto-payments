@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { TOTPService } from "../services/totpService";
+import { TOTPService } from "../services/totp.service";
 import { prisma } from "@crypto-payments/db";
 import { validateBody } from "../middleware/validation";
 import { z } from "zod";

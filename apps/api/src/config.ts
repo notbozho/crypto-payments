@@ -1,4 +1,9 @@
+import { ExpressAuthConfig } from "@auth/express";
+import Credentials from "@auth/express/providers/credentials";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import dotenv from "dotenv";
+import { prisma } from "@crypto-payments/db";
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 
@@ -42,4 +47,71 @@ export const config = {
         sepolia: process.env.SEPOLIA_RPC_URL,
         anvil: process.env.ANVIL_RPC_URL || "http://127.0.0.1:8545",
     },
+};
+
+declare module "@auth/express" {
+    interface Session {
+        user: {
+            id: string;
+            email?: string;
+            name?: string;
+            requires2FA?: boolean;
+            is2FAVerified?: boolean;
+        };
+    }
+}
+
+export const authConfig: ExpressAuthConfig = {
+    adapter: PrismaAdapter(prisma),
+    session: {
+        strategy: "jwt",
+    },
+    debug: config.nodeEnv === "development",
+    providers: [
+        Credentials({
+            credentials: {
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" },
+            },
+            authorize: async (credentials) => {
+                const seller = await prisma.seller.findUnique({
+                    where: { email: credentials.email as string },
+                });
+
+                if (!seller?.passwordHash) return null;
+
+                const isValid = await bcrypt.compare(
+                    credentials.password as string,
+                    seller.passwordHash
+                );
+
+                if (!isValid) return null;
+
+                return {
+                    id: seller.id,
+                    email: seller.email,
+                    name: seller.name,
+                    requires2FA: seller.totpEnabled,
+                };
+            },
+        }),
+    ],
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token.requires2FA = (user as any).requires2FA;
+                token.id = user.id;
+            }
+
+            return token;
+        },
+        session({ session, token }) {
+            if (token.requires2FA) {
+                session.user.requires2FA = token.requires2FA as boolean;
+            }
+            session.user.id = token.id as string;
+            return session;
+        },
+    },
+    trustHost: true,
 };
