@@ -16,8 +16,10 @@ import {
 import { Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
-    const { user } = useAuthStore();
-    const { updateSellerWallet, loading } = useDashboardStore();
+    const user = useAuthStore((s) => s.user);
+    const updateSellerWallet = useDashboardStore((s) => s.updateSellerWallet);
+    const loading = useDashboardStore((s) => s.loading);
+
     const [walletAddress, setWalletAddress] = useState("");
 
     const handleUpdateWallet = async (e: React.FormEvent) => {
@@ -27,9 +29,7 @@ export default function ProfilePage() {
         try {
             await updateSellerWallet(walletAddress);
             setWalletAddress("");
-        } catch (error) {
-            // Error is handled in the store
-        }
+        } catch (error) {}
     };
 
     return (

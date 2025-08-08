@@ -25,7 +25,11 @@ app.use(
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     })
 );
-app.use(morgan("combined"));
+morgan.token("headers", (req) => JSON.stringify(req.headers));
+
+// morgan.token("body", (req) => JSON.stringify(req));
+
+app.use(morgan("tiny"));
 app.use(express.json());
 
 // Health check

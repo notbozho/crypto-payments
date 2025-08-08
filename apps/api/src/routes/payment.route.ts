@@ -25,7 +25,7 @@ router.put("/seller/wallet", authenticatedUser, async (req, res) => {
         if (!validation.success) {
             return res.status(400).json({
                 error: "Validation failed",
-                details: validation.error.errors,
+                details: validation.error.issues,
             });
         }
 
@@ -49,7 +49,7 @@ router.post("/", authenticatedUser, async (req, res) => {
         if (!validation.success) {
             return res.status(400).json({
                 error: "Validation failed",
-                details: validation.error.errors,
+                details: validation.error.issues,
             });
         }
 

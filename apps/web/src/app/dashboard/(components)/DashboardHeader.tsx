@@ -9,19 +9,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-// import { CreatePaymentLinkDialog } from "@/components/create-payment-link-dialog";
 
-// Mock notifications - you can replace this with real data from your store
 const mockNotifications = [
     {
         id: "1",
@@ -66,7 +56,6 @@ function NotificationsDropdown() {
     };
 
     const getNotificationIcon = (type: string) => {
-        // You can add different icons based on notification type
         return "🔔";
     };
 
@@ -204,8 +193,8 @@ export function DashboardHeader() {
             </header>
 
             {/* <CreatePaymentLinkDialog */}
-                {/* open={showCreateLink} */}
-                {/* onOpenChange={setShowCreateLink} */}
+            {/* open={showCreateLink} */}
+            {/* onOpenChange={setShowCreateLink} */}
             {/* /> */}
         </>
     );

@@ -30,13 +30,9 @@ const STEP_PROGRESS = {
 };
 
 export function RegistrationFlow() {
-    const { currentStep, reset } = useRegistrationFlowStore();
+    const currentStep = useRegistrationFlowStore((s) => s.currentStep);
 
-    useEffect(() => {
-        return () => {
-            // reset();
-        };
-    }, []);
+    // TODO: check if user is already logged in
 
     const renderStep = () => {
         switch (currentStep) {

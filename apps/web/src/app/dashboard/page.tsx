@@ -46,6 +46,7 @@ import {
     ChainType,
 } from "@crypto-payments/shared";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/utils";
 
 function StatsCards() {
     const { stats, loading, errors, fetchPaymentLinks } = useDashboardStore();
@@ -192,11 +193,6 @@ function PaymentLinksTable() {
                 <span className="capitalize">{status}</span>
             </Badge>
         );
-    };
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard");
     };
 
     const formatDate = (dateString: string) => {
@@ -386,14 +382,15 @@ function PaymentLinksTable() {
 }
 
 export default function DashboardPage() {
-    const { fetchPaymentLinks } = useDashboardStore();
-    const { isAuthenticated, loading } = useAuthStore();
+    const fetchPaymentLinks = useDashboardStore((s) => s.fetchPaymentLinks);
+    const authStatus = useAuthStore((s) => s.authStatus);
+    const loading = useAuthStore((s) => s.loading);
 
     useEffect(() => {
-        if (isAuthenticated && !loading) {
+        if (authStatus === "authenticated" && !loading) {
             fetchPaymentLinks();
         }
-    }, [isAuthenticated, loading, fetchPaymentLinks]);
+    }, [authStatus, loading, fetchPaymentLinks]);
 
     if (loading) {
         return (

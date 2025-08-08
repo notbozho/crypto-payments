@@ -20,8 +20,11 @@ export default function SignInPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    const { login, loading } = useAuthStore();
+    const login = useAuthStore((s) => s.login);
+    const loading = useAuthStore((s) => s.loading);
     const router = useRouter();
+
+    // TODO: check if user is already logged in
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

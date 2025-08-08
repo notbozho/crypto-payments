@@ -13,30 +13,15 @@ export default function DashboardLayoutPage({
 }: {
     children: React.ReactNode;
 }) {
-    const { user, isAuthenticated, loading, checkAuth } = useAuthStore();
-    const router = useRouter();
+    const checkAuth = useAuthStore((s) => s.checkAuth);
+    const authStatus = useAuthStore((s) => s.authStatus);
+    const loading = useAuthStore((s) => s.loading);
 
     useEffect(() => {
-        checkAuth();
-    }, [checkAuth]);
-
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push("/auth/signin");
+        if (authStatus === "unknown" && !loading) {
+            checkAuth();
         }
-    }, [isAuthenticated, loading, router]);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-
-    if (!isAuthenticated) {
-        return null;
-    }
+    }, [authStatus, loading, checkAuth]);
 
     return (
         <>
@@ -44,7 +29,9 @@ export default function DashboardLayoutPage({
                 <DashboardSidebar />
                 <SidebarInset>
                     <DashboardHeader />
-                    <main className="flex-1 p-6">{children}</main>
+                    {authStatus === "authenticated" && (
+                        <main className="flex-1 p-6">{children}</main>
+                    )}
                 </SidebarInset>
             </SidebarProvider>
         </>

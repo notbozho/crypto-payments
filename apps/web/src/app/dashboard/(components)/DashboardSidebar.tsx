@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, CreditCard, Activity, Wallet } from "lucide-react";
+import { Home, CreditCard, Activity, Wallet, LogOut, Edit } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import {
     Sidebar,
@@ -36,8 +36,10 @@ const navItems = [
 ];
 
 export function DashboardSidebar() {
-    const { user, logout } = useAuthStore();
     const router = useRouter();
+
+    const user = useAuthStore((s) => s.user);
+    const logout = useAuthStore((s) => s.logout);
 
     const handleLogout = async () => {
         await logout();
@@ -153,12 +155,12 @@ export function DashboardSidebar() {
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleEditProfile}>
-                                    <Wallet className="mr-2 h-4 w-4" />
+                                    <Edit className="mr-2 h-4 w-4" />
                                     Edit Profile
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout}>
-                                    <Wallet className="mr-2 h-4 w-4" />
+                                    <LogOut className="mr-2 h-4 w-4" />
                                     Log out
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

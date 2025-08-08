@@ -3,22 +3,30 @@ import { persist } from "zustand/middleware";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-interface User {
+type User = {
     id: string;
     email: string;
     name?: string;
     emailVerified?: boolean;
-}
+};
 
-interface AuthState {
+type AuthStatus =
+    | "unknown"
+    | "authenticated"
+    | "unauthenticated"
+    | "requires2fa";
+
+type AuthState = {
     user: User | null;
-    isAuthenticated: boolean;
+    authStatus: AuthStatus;
+    // isAuthenticated: boolean;
     loading: boolean;
 
     // Actions
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
     checkAuth: () => Promise<void>;
+    refreshToken: () => Promise<void>;
     forgotPassword: (
         email: string
     ) => Promise<{ success: boolean; message: string }>;
@@ -28,16 +36,20 @@ interface AuthState {
     ) => Promise<{ success: boolean; message: string }>;
     setUser: (user: User | null) => void;
     setLoading: (loading: boolean) => void;
-}
+};
 
 export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             user: null,
-            isAuthenticated: false,
+            authStatus: "unknown",
             loading: false,
 
-            setUser: (user) => set({ user, isAuthenticated: !!user }),
+            setUser: (user) =>
+                set({
+                    user,
+                    authStatus: user ? "authenticated" : "unauthenticated",
+                }),
             setLoading: (loading) => set({ loading }),
 
             checkAuth: async () => {
@@ -45,23 +57,54 @@ export const useAuthStore = create<AuthState>()(
                     set({ loading: true });
                     const response = await fetch(`${API_URL}/auth/session`, {
                         credentials: "include",
+                        cache: "no-store",
                     });
 
                     if (response.ok) {
                         const session = await response.json();
                         if (session?.user) {
-                            set({ user: session.user, isAuthenticated: true });
+                            if (session.expires) {
+                                const expiresAt = new Date(session.expires);
+                                if (expiresAt < new Date()) {
+                                    set({
+                                        user: null,
+                                        authStatus: "unauthenticated",
+                                    });
+                                    await get().refreshToken();
+                                    return;
+                                }
+                            }
+
+                            set({
+                                user: session.user,
+                                authStatus: "authenticated",
+                            });
                         } else {
-                            set({ user: null, isAuthenticated: false });
+                            set({ user: null, authStatus: "unauthenticated" });
                         }
                     } else {
-                        set({ user: null, isAuthenticated: false });
+                        set({ user: null, authStatus: "unauthenticated" });
                     }
                 } catch (error) {
                     console.error("Auth check failed:", error);
-                    set({ user: null, isAuthenticated: false });
+                    set({ user: null, authStatus: "unauthenticated" });
                 } finally {
                     set({ loading: false });
+                }
+            },
+            refreshToken: async () => {
+                try {
+                    const res = await fetch(`${API_URL}/auth/session`, {
+                        method: "POST",
+                        credentials: "include",
+                    });
+
+                    if (res.ok) {
+                        const session = await res.json();
+                        set({ user: session.user });
+                    }
+                } catch (error) {
+                    console.error("Token refresh failed:", error);
                 }
             },
             login: async (email, password) => {
@@ -90,9 +133,8 @@ export const useAuthStore = create<AuthState>()(
                         redirect: "manual",
                     });
 
-                    // Check if we're now authenticated
                     await get().checkAuth();
-                    return get().isAuthenticated;
+                    return get().authStatus === "authenticated";
                 } catch (error) {
                     console.error("Login failed:", error);
                     return false;
@@ -163,7 +205,7 @@ export const useAuthStore = create<AuthState>()(
                 } catch (error) {
                     console.error("Logout failed:", error);
                 } finally {
-                    set({ user: null, isAuthenticated: false });
+                    set({ user: null, authStatus: "unauthenticated" });
                 }
             },
         }),
@@ -171,7 +213,7 @@ export const useAuthStore = create<AuthState>()(
             name: "auth-storage",
             partialize: (state) => ({
                 user: state.user,
-                isAuthenticated: state.isAuthenticated,
+                authStatus: state.authStatus,
             }),
         }
     )

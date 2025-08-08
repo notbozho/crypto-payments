@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -17,4 +18,6 @@ export async function copyToClipboard(text: string): Promise<void> {
         document.execCommand("copy");
         document.body.removeChild(textArea);
     }
+
+    toast.success("Copied to clipboard");
 }
