@@ -3,81 +3,35 @@ import { TOTPService } from "../services/totp.service";
 import { prisma } from "@crypto-payments/db";
 import { validateBody } from "../middleware/validation";
 import { z } from "zod";
+import { authenticatedUser } from "../middleware/auth";
 
 const router = Router();
 
-// Validation schemas
 const setupTOTPSchema = z.object({
     email: z.string().email(),
-    sellerId: z.string().optional(), // For registration flow
+    sellerId: z.string().optional(),
 });
 
 const verifyTOTPSetupSchema = z.object({
     secret: z.string().min(32),
     token: z.string().length(6),
     backupCodes: z.array(z.string()).length(8),
-    sellerId: z.string().optional(), // For registration flow
+    sellerId: z.string().optional(),
 });
 
 const verifyTOTPSchema = z.object({
-    token: z.string().length(6),
-});
-
-const verifyBackupCodeSchema = z.object({
-    code: z.string().length(8),
-});
-
-// Helper to get seller ID from request (either from auth or body)
-const getSellerId = (req: any): string | null => {
-    return req.body.sellerId || req.seller?.id || null;
-};
-
-router.post("/setup", validateBody(setupTOTPSchema), async (req, res) => {
-    try {
-        const { email } = req.body;
-        const sellerId = getSellerId(req);
-
-        if (!sellerId) {
-            return res.status(400).json({
-                error: "Invalid session or seller ID",
-            });
-        }
-
-        const seller = await prisma.seller.findUnique({
-            where: { id: sellerId },
-            select: { totpEnabled: true },
-        });
-
-        if (seller?.totpEnabled) {
-            return res.status(400).json({
-                error: "2FA is already enabled for this account",
-            });
-        }
-
-        const setupData = await TOTPService.generateTOTPSetup(sellerId, email);
-
-        res.json({
-            message: "TOTP setup data generated",
-            data: {
-                qrCode: setupData.qrCode,
-                manualEntryKey: setupData.manualEntryKey,
-                backupCodes: setupData.backupCodes,
-                secret: setupData.secret,
-            },
-        });
-    } catch (error) {
-        console.error("TOTP setup error:", error);
-        res.status(500).json({ error: "Failed to generate 2FA setup" });
-    }
+    code: z.string().length(6).optional(),
+    backupCode: z.string().length(8).optional(),
+    context: z.string(),
 });
 
 router.post(
-    "/enable",
-    validateBody(verifyTOTPSetupSchema),
+    "/setup",
+    authenticatedUser,
+    validateBody(setupTOTPSchema),
     async (req, res) => {
         try {
-            const { secret, token, backupCodes } = req.body;
-            const sellerId = getSellerId(req);
+            const sellerId = req.session!.user?.id;
 
             if (!sellerId) {
                 return res.status(400).json({
@@ -85,7 +39,60 @@ router.post(
                 });
             }
 
-            const isValidToken = TOTPService.verifyTOTPSetup(secret, token);
+            const seller = await prisma.seller.findUnique({
+                where: { id: sellerId },
+                select: { totpEnabled: true, email: true },
+            });
+
+            if (!seller) {
+                return res.status(400).json({
+                    error: "Invalid session or seller ID",
+                });
+            }
+
+            if (seller?.totpEnabled) {
+                return res.status(400).json({
+                    error: "2FA is already enabled for this account",
+                });
+            }
+
+            const setupData = await TOTPService.generateTOTPSetup(
+                sellerId,
+                seller.email
+            );
+
+            res.json({
+                message: "TOTP setup data generated",
+                data: {
+                    qrCode: setupData.qrCode,
+                    manualEntryKey: setupData.manualEntryKey,
+                    backupCodes: setupData.backupCodes,
+                    secret: setupData.secret,
+                },
+            });
+        } catch (error) {
+            console.error("TOTP setup error:", error);
+            res.status(500).json({ error: "Failed to generate 2FA setup" });
+        }
+    }
+);
+
+router.post(
+    "/enable",
+    authenticatedUser,
+    validateBody(verifyTOTPSetupSchema),
+    async (req, res) => {
+        try {
+            const { secret, code, backupCodes } = req.body;
+            const sellerId = req.session!.user?.id;
+
+            if (!sellerId) {
+                return res.status(400).json({
+                    error: "Invalid session or seller ID",
+                });
+            }
+
+            const isValidToken = TOTPService.verifyTOTPSetup(secret, code);
 
             if (!isValidToken) {
                 return res.status(400).json({
@@ -106,42 +113,14 @@ router.post(
     }
 );
 
-router.post("/verify", validateBody(verifyTOTPSchema), async (req, res) => {
-    try {
-        const { token } = req.body;
-        const sellerId = getSellerId(req);
-
-        if (!sellerId) {
-            return res.status(401).json({
-                error: "Authentication required",
-            });
-        }
-
-        const isValid = await TOTPService.verifyTOTP(sellerId, token);
-
-        if (!isValid) {
-            return res.status(400).json({
-                error: "Invalid verification code",
-            });
-        }
-
-        res.json({
-            message: "TOTP verification successful",
-            verified: true,
-        });
-    } catch (error) {
-        console.error("Verify TOTP error:", error);
-        res.status(500).json({ error: "TOTP verification failed" });
-    }
-});
-
 router.post(
-    "/verify-backup",
-    validateBody(verifyBackupCodeSchema),
+    "/verify",
+    authenticatedUser,
+    validateBody(verifyTOTPSchema),
     async (req, res) => {
         try {
-            const { code } = req.body;
-            const sellerId = getSellerId(req);
+            const { code, backupCode, context } = req.body;
+            const sellerId = req.session!.user?.id;
 
             if (!sellerId) {
                 return res.status(401).json({
@@ -149,34 +128,47 @@ router.post(
                 });
             }
 
-            const isValid = await TOTPService.verifyBackupCode(sellerId, code);
-
-            if (!isValid) {
+            if (context === "SENSITIVE_ACTION" && backupCode) {
                 return res.status(400).json({
-                    error: "Invalid backup code or code already used",
+                    error: "Backup codes not allowed for sensitive actions",
                 });
             }
 
-            // Get remaining backup codes count
-            const remainingCodes = await TOTPService.getRemainingBackupCodes(
-                sellerId
+            if (!code && !backupCode) {
+                return res
+                    .status(400)
+                    .json({ error: "Code or backup code required" });
+            }
+
+            const isValid = await TOTPService.verifyTOTP(
+                sellerId,
+                code,
+                backupCode,
+                context
             );
 
+            if (!isValid) {
+                return res.status(400).json({
+                    error: "Invalid verification code",
+                });
+            }
+
+            await TOTPService.markSessionVerified(req, context);
+
             res.json({
-                message: "Backup code verification successful",
+                message: "TOTP verification successful",
                 verified: true,
-                remainingCodes,
             });
         } catch (error) {
-            console.error("Verify backup code error:", error);
-            res.status(500).json({ error: "Backup code verification failed" });
+            console.error("Verify TOTP error:", error);
+            res.status(500).json({ error: "TOTP verification failed" });
         }
     }
 );
 
-router.post("/regenerate-backup", async (req, res) => {
+router.post("/regenerate-backup", authenticatedUser, async (req, res) => {
     try {
-        const sellerId = getSellerId(req);
+        const sellerId = req.session!.user?.id;
 
         if (!sellerId) {
             return res.status(401).json({
@@ -210,9 +202,9 @@ router.post("/regenerate-backup", async (req, res) => {
     }
 });
 
-router.post("/disable", async (req, res) => {
+router.post("/disable", authenticatedUser, async (req, res) => {
     try {
-        const sellerId = getSellerId(req);
+        const sellerId = req.session!.user?.id;
 
         if (!sellerId) {
             return res.status(401).json({
@@ -232,9 +224,9 @@ router.post("/disable", async (req, res) => {
     }
 });
 
-router.get("/status", async (req, res) => {
+router.get("/status", authenticatedUser, async (req, res) => {
     try {
-        const sellerId = getSellerId(req);
+        const sellerId = req.session!.user?.id;
 
         if (!sellerId) {
             return res.status(401).json({

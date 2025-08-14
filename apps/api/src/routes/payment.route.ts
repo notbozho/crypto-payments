@@ -8,9 +8,11 @@ import { authenticatedUser } from "../middleware/auth";
 
 declare module "express-serve-static-core" {
     interface Request {
-        user?: {
-            id: string;
-            // add other user properties if needed
+        session?: {
+            user?: {
+                id: string;
+            };
+            action2faVerifiedAt?: number;
         };
     }
 }
@@ -30,7 +32,7 @@ router.put("/seller/wallet", authenticatedUser, async (req, res) => {
         }
 
         await PaymentLinkService.updateSellerWallet(
-            req.user!.id,
+            req.session!.user!.id,
             validation.data.walletAddress
         );
 
@@ -54,7 +56,7 @@ router.post("/", authenticatedUser, async (req, res) => {
         }
 
         const paymentLink = await PaymentLinkService.createPaymentLink(
-            req.user!.id,
+            req.session!.user!.id,
             validation.data
         );
 
@@ -75,7 +77,7 @@ router.post("/", authenticatedUser, async (req, res) => {
 router.get("/", authenticatedUser, async (req, res) => {
     try {
         const paymentLinks = await PaymentLinkService.getSellerPaymentLinks(
-            req.user!.id
+            req.session!.user!.id
         );
 
         res.json({

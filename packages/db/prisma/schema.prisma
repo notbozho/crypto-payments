@@ -33,7 +33,7 @@ model Seller {
 model BackupCode {
   id        String    @id @default(cuid())
   sellerId  String
-  codeHash  String    // Hashed backup code
+  codeHash  String
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   

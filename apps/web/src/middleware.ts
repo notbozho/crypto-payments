@@ -26,14 +26,16 @@ export async function middleware(req: NextRequest) {
 
         const session = await res.json();
 
-        if (session?.requires2FA) {
-            const twofaUrl = new URL("/auth/2fa", req.url);
-            return NextResponse.redirect(twofaUrl);
-        }
-
         if (!session?.user) {
             const signinUrl = new URL("/auth/signin", req.url);
             return NextResponse.redirect(signinUrl);
+        }
+
+        if (session.user.requires2FA && !session.user.is2FAVerified) {
+            const twofaUrl = new URL("/auth/2fa", req.url);
+            twofaUrl.searchParams.set("context", "login");
+            twofaUrl.searchParams.set("redirect", pathname);
+            return NextResponse.redirect(twofaUrl);
         }
 
         return NextResponse.next();

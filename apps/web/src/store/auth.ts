@@ -26,6 +26,7 @@ type AuthState = {
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
     checkAuth: () => Promise<void>;
+    verify2FA: (code?: string, backupCode?: string) => Promise<boolean>;
     refreshToken: () => Promise<void>;
     forgotPassword: (
         email: string
@@ -63,22 +64,29 @@ export const useAuthStore = create<AuthState>()(
                     if (response.ok) {
                         const session = await response.json();
                         if (session?.user) {
-                            if (session.expires) {
-                                const expiresAt = new Date(session.expires);
-                                if (expiresAt < new Date()) {
-                                    set({
-                                        user: null,
-                                        authStatus: "unauthenticated",
-                                    });
-                                    await get().refreshToken();
-                                    return;
+                            if (
+                                session.user.requires2FA &&
+                                !session.user.is2FAVerified
+                            ) {
+                                set({ user: null, authStatus: "requires2fa" });
+                            } else {
+                                if (session.expires) {
+                                    const expiresAt = new Date(session.expires);
+                                    if (expiresAt < new Date()) {
+                                        set({
+                                            user: null,
+                                            authStatus: "unauthenticated",
+                                        });
+                                        await get().refreshToken();
+                                        return;
+                                    }
                                 }
-                            }
 
-                            set({
-                                user: session.user,
-                                authStatus: "authenticated",
-                            });
+                                set({
+                                    user: session.user,
+                                    authStatus: "authenticated",
+                                });
+                            }
                         } else {
                             set({ user: null, authStatus: "unauthenticated" });
                         }
@@ -92,6 +100,34 @@ export const useAuthStore = create<AuthState>()(
                     set({ loading: false });
                 }
             },
+
+            verify2FA: async (code?: string, backupCode?: string) => {
+                try {
+                    set({ loading: true });
+                    const response = await fetch(`${API_URL}/totp/verify`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            code,
+                            backupCode,
+                            context: "LOGIN",
+                        }),
+                        credentials: "include",
+                    });
+
+                    if (response.ok) {
+                        await get().checkAuth();
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error("2FA verification failed:", error);
+                    return false;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
             refreshToken: async () => {
                 try {
                     const res = await fetch(`${API_URL}/auth/session`, {

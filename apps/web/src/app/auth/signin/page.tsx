@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,12 @@ export default function SignInPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
+    const router = useRouter();
+
+    const searchParams = useSearchParams();
+    const authStatus = useAuthStore((s) => s.authStatus);
     const login = useAuthStore((s) => s.login);
     const loading = useAuthStore((s) => s.loading);
-    const router = useRouter();
 
     // TODO: check if user is already logged in
 
@@ -38,6 +41,20 @@ export default function SignInPage() {
             setError("Invalid email or password");
         }
     };
+
+    useEffect(() => {
+        if (authStatus === "authenticated") {
+            const redirectUrl = searchParams.get("redirect") || "/dashboard";
+            router.push(redirectUrl);
+        } else if (authStatus === "requires2fa") {
+            const redirectUrl = searchParams.get("redirect") || "/dashboard";
+            router.push(
+                `/auth/2fa?context=login&redirect=${encodeURIComponent(
+                    redirectUrl
+                )}`
+            );
+        }
+    }, [authStatus, router, searchParams]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -113,3 +130,4 @@ export default function SignInPage() {
         </div>
     );
 }
+ 

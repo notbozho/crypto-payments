@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,41 +19,29 @@ import {
     RefreshCw,
     Smartphone,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
-type ActionType =
-    | "login"
-    | "delete-account"
-    | "change-password"
-    | "sensitive-action";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-interface TwoFARequiredPageProps {
-    redirectPath?: string;
-    actionContext?: ActionType;
-    canGoBack?: boolean;
-    onCancel?: () => void;
-}
-
-export default function TwoFARequiredPage({
-    redirectPath = "/dashboard",
-    actionContext = "login",
-    canGoBack = true,
-    onCancel,
-}: TwoFARequiredPageProps) {
+export default function TwoFARequiredPage() {
     const [code, setCode] = useState(["", "", "", "", "", ""]);
+    const [backupCode, setBackupCode] = useState("");
+    const [useBackup, setUseBackup] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [verificationAttempts, setVerificationAttempts] = useState(0);
-
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const router = useRouter();
-    const { user, logout } = useAuthStore();
+    const searchParams = useSearchParams();
+    const { user, verify2FA } = useAuthStore();
+    const context = searchParams.get("context")?.toUpperCase() || "LOGIN";
+    const redirect = searchParams.get("redirect") || "/dashboard";
 
-    // Auto-focus first input on mount
     useEffect(() => {
         if (inputRefs.current[0]) {
             inputRefs.current[0].focus();
         }
-    }, []);
+    }, [useBackup]);
 
     const handleCodeChange = (index: number, value: string) => {
         if (value && !/^\d$/.test(value)) return;
@@ -67,7 +55,7 @@ export default function TwoFARequiredPage({
         }
 
         if (newCode.every((digit) => digit !== "") && value) {
-            handleVerifyCode(newCode.join(""));
+            handleVerifyCode(newCode);
         }
     };
 
@@ -83,62 +71,84 @@ export default function TwoFARequiredPage({
                 if (pastedCode.length === 6) {
                     const newCode = pastedCode.split("");
                     setCode(newCode);
-                    handleVerifyCode(pastedCode);
+                    handleVerifyCode(newCode);
                 }
             });
         }
     };
 
-    const handleVerifyCode = async (codeToVerify: string) => {
-        if (codeToVerify.length !== 6 || loading) return;
+    const handleVerifyCode = async (code: string[]) => {
+        if (loading) return;
 
         setError("");
         setLoading(true);
 
         try {
-            const response = await fetch("/api/totp/verify", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    token: codeToVerify,
-                }),
-            });
+            const codeToVerify = useBackup ? backupCode : code.join("");
+            let success = false;
 
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                router.push(redirectPath);
+            if (context === "LOGIN") {
+                success = await verify2FA(
+                    useBackup ? undefined : codeToVerify,
+                    useBackup ? codeToVerify : undefined
+                );
             } else {
-                setError(data.error || "Invalid verification code");
-                setVerificationAttempts((prev) => prev + 1);
+                const response = await fetch(`${API_URL}/totp/verify`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        code: codeToVerify,
+                        context,
+                    }),
+                    credentials: "include",
+                });
 
-                setCode(["", "", "", "", "", ""]);
-                inputRefs.current[0]?.focus();
+                console.log("are", response);
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || "Verification failed");
+                }
+
+                success = true;
             }
-        } catch (err) {
-            setError("Failed to verify code. Please try again.");
-            setCode(["", "", "", "", "", ""]);
-            inputRefs.current[0]?.focus();
+
+            if (success) {
+                router.push(redirect);
+            } else {
+                setError("Invalid verification code");
+                setVerificationAttempts((prev) => prev + 1);
+                resetInputs();
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
+            setError(err.message || "Failed to verify code");
+            setError("Failed to verify code");
+            setVerificationAttempts((prev) => prev + 1);
+            resetInputs();
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCancel = () => {
-        if (onCancel) {
-            onCancel();
+    const resetInputs = () => {
+        setCode(["", "", "", "", "", ""]);
+        setBackupCode("");
+        if (useBackup) {
+            inputRefs.current[0]?.focus();
         } else {
-            logout();
-            router.push("/auth/signin");
+            inputRefs.current[0]?.focus();
         }
+    };
+
+    const handleCancel = () => {
+        router.push("/auth/signin");
     };
 
     const maxAttemptsReached = verificationAttempts >= 5;
 
     const getContextDescription = () => {
-        switch (actionContext) {
+        switch (context) {
             case "login":
                 return "Complete your sign in with two-factor authentication";
             case "delete-account":
@@ -165,7 +175,6 @@ export default function TwoFARequiredPage({
                     <CardDescription>{getContextDescription()}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Global Error */}
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -173,7 +182,6 @@ export default function TwoFARequiredPage({
                         </div>
                     )}
 
-                    {/* Max Attempts Warning */}
                     {maxAttemptsReached && (
                         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md text-sm">
                             Too many incorrect attempts. Please try again later
@@ -181,42 +189,85 @@ export default function TwoFARequiredPage({
                         </div>
                     )}
 
-                    {/* Code Inputs */}
-                    <div className="space-y-4">
-                        <div className="flex justify-center gap-2">
-                            {code.map((digit, index) => (
-                                <Input
-                                    key={index}
-                                    ref={(el) => {
-                                        inputRefs.current[index] = el;
-                                    }}
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={(e) =>
-                                        handleCodeChange(index, e.target.value)
-                                    }
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className="w-12 h-12 text-center text-lg font-mono"
-                                    disabled={loading || maxAttemptsReached}
-                                />
-                            ))}
+                    {context === "login" && (
+                        <div className="mb-4">
+                            <Button
+                                type="button"
+                                variant="link"
+                                onClick={() => setUseBackup(!useBackup)}
+                            >
+                                {useBackup
+                                    ? "Use Authenticator App"
+                                    : "Use Backup Code"}
+                            </Button>
                         </div>
-                    </div>
+                    )}
 
-                    <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                        <Smartphone className="h-4 w-4" />
-                        Enter the 6-digit code from your authenticator app
-                    </div>
+                    {!useBackup ? (
+                        <div className="space-y-4">
+                            <div className="flex justify-center gap-2">
+                                {code.map((digit, index) => (
+                                    <Input
+                                        key={index}
+                                        ref={(el) => {
+                                            inputRefs.current[index] = el;
+                                        }}
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) =>
+                                            handleCodeChange(
+                                                index,
+                                                e.target.value
+                                            )
+                                        }
+                                        onKeyDown={(e) =>
+                                            handleKeyDown(index, e)
+                                        }
+                                        className="w-12 h-12 text-center text-lg font-mono"
+                                        disabled={loading || maxAttemptsReached}
+                                    />
+                                ))}
+                            </div>
+                            <div className="text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                                <Smartphone className="h-4 w-4" />
+                                Enter the 6-digit code from your authenticator
+                                app
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="backupCode">Backup Code</Label>
+                                <Input
+                                    id="backupCode"
+                                    type="text"
+                                    value={backupCode}
+                                    onChange={(e) =>
+                                        setBackupCode(e.target.value)
+                                    }
+                                    placeholder="One-time backup code"
+                                    disabled={loading || maxAttemptsReached}
+                                    ref={(el) => {
+                                        inputRefs.current[0] = el;
+                                    }}
+                                />
+                            </div>
+                            <div className="text-center text-sm text-muted-foreground">
+                                Enter one of your unused backup codes
+                            </div>
+                        </div>
+                    )}
 
-                    {/* Actions */}
                     <div className="space-y-3">
                         <Button
-                            onClick={() => handleVerifyCode(code.join(""))}
+                            onClick={() => handleVerifyCode(code)}
                             disabled={
                                 loading ||
-                                code.join("").length !== 6 ||
+                                (useBackup
+                                    ? !backupCode
+                                    : code.join("").length !== 6) ||
                                 maxAttemptsReached
                             }
                             className="w-full"
@@ -231,33 +282,30 @@ export default function TwoFARequiredPage({
                             )}
                         </Button>
 
-                        {canGoBack && (
-                            <Button
-                                variant="outline"
-                                onClick={handleCancel}
-                                disabled={loading}
-                                className="w-full"
-                            >
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Cancel
-                            </Button>
-                        )}
+                        <Button
+                            variant="outline"
+                            onClick={handleCancel}
+                            disabled={loading}
+                            className="w-full"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Cancel
+                        </Button>
                     </div>
 
-                    {/* Help Text */}
-                    <div className="text-center text-xs text-muted-foreground">
-                        Don&apos;t have access to your authenticator app?
-                        <br />
-                        <button
-                            type="button"
-                            className="text-blue-600 hover:underline mt-1"
-                            onClick={() => {
-                                router.push("/auth/2fa/recovery");
-                            }}
-                        >
-                            Use recovery codes
-                        </button>
-                    </div>
+                    {context === "login" && (
+                        <div className="text-center text-xs text-muted-foreground">
+                            Don&apos;t have access to your authenticator app?
+                            <br />
+                            <button
+                                type="button"
+                                className="text-blue-600 hover:underline mt-1"
+                                onClick={() => setUseBackup(true)}
+                            >
+                                Use backup codes
+                            </button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

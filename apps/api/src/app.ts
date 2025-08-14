@@ -27,8 +27,6 @@ app.use(
 );
 morgan.token("headers", (req) => JSON.stringify(req.headers));
 
-// morgan.token("body", (req) => JSON.stringify(req));
-
 app.use(morgan("tiny"));
 app.use(express.json());
 
@@ -37,6 +35,7 @@ app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+app.set("trust proxy", true);
 app.use("/api/auth", ExpressAuth(authConfig));
 app.use("/api", authRoutes);
 app.use("/api/totp", totpRoutes);

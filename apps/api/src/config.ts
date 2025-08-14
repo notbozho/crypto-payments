@@ -34,6 +34,7 @@ export const config = {
         process.env.EMAIL_VERIFICATION_SECRET || "email-verification-secret",
     passwordResetSecret:
         process.env.PASSWORD_RESET_SECRET || "password-reset-secret",
+    authSecret: process.env.AUTH_SECRET || "auth-secret",
 
     // Wallet security
     masterSeed: process.env.MASTER_SEED || "",
@@ -58,6 +59,7 @@ declare module "@auth/express" {
             requires2FA?: boolean;
             is2FAVerified?: boolean;
         };
+        action2faVerifiedAt?: number;
     }
 }
 
@@ -97,10 +99,19 @@ export const authConfig: ExpressAuthConfig = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.requires2FA = (user as any).requires2FA;
                 token.id = user.id;
+                token.is2FAVerified = false;
+            }
+
+            if (trigger === "update" && session?.is2FAVerified !== undefined) {
+                token.is2FAVerified = session.user.is2FAVerified;
+            }
+
+            if (trigger === "update" && session?.action2faVerifiedAt) {
+                token.action2faVerifiedAt = session.action2faVerifiedAt;
             }
 
             return token;
@@ -110,6 +121,8 @@ export const authConfig: ExpressAuthConfig = {
                 session.user.requires2FA = token.requires2FA as boolean;
             }
             session.user.id = token.id as string;
+            session.user.is2FAVerified = token.is2FAVerified as boolean;
+            session.action2faVerifiedAt = token.action2faVerifiedAt as number;
             return session;
         },
     },

@@ -11,7 +11,7 @@ export async function authenticatedUser(
         res.locals.session ?? (await getSession(req, authConfig)) ?? undefined;
 
     res.locals.session = session;
-    req.user = session?.user;
+    req.session = session;
 
     if (session) {
         return next();
@@ -27,6 +27,6 @@ export async function currentSession(
 ) {
     const session = (await getSession(req, authConfig)) ?? undefined;
     res.locals.session = session;
-    req.user = session?.user;
+    req.session = session;
     return next();
 }
