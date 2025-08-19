@@ -1,27 +1,22 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Bitcoin } from "lucide-react";
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <div className="">
             {/* Header */}
-            <header className="container mx-auto px-4 py-6">
+            <header className="fixed top-0 p-2 left-1/2 transform -translate-x-1/2 z-10 w-full mx-auto md:px-20 md:py-12">
                 <nav className="flex justify-between items-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                        CryptoPay
+                    <div className="text-2xl font-medium text-sky-100 flex gap-1 md:gap-2 items-center">
+                        <Bitcoin size={28} />
+                        <div className="hidden md:block">CryptoPay</div>
                     </div>
-                    <div className="space-x-4">
+                    <div className="space-x-2 md:space-x-4">
                         <Button variant="ghost" asChild>
                             <Link href="/auth/signin">Sign In</Link>
                         </Button>
-                        <Button asChild>
+                        <Button variant="outline" asChild>
                             <Link href="/auth/signup">Get Started</Link>
                         </Button>
                     </div>
@@ -29,83 +24,49 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <main className="container mx-auto px-4 py-20">
-                <div className="text-center space-y-8">
-                    <h1 className="text-5xl font-bold text-gray-900 max-w-4xl mx-auto">
-                        Accept Crypto Payments
-                        <span className="text-blue-600"> Effortlessly</span>
-                    </h1>
+            <main className="mx-auto p-0 sm:p-3 lg:p-6">
+                <div className="relative min-h-screen flex items-center justify-center rounded-0 rounded-br-3xl rounded-bl-3xl md:rounded-3xl p-8 sm:p-12 lg:p-16 overflow-hidden">
+                    <div className="absolute inset-0 -z-10 rounded-3xl">
+                        <div className="w-full h-full noise hero-bg"></div>
+                    </div>
+                    <div className="text-center space-y-8 ">
+                        <div className="border-primary/50 bg-card/50 mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 shadow-sky-700 shadow-[0_0px_24px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-10">
+                            <span className="text-foreground text-sm tracking-wide">
+                                Built for speed and simplicity
+                            </span>
+                        </div>
+                        <h1 className="text-3xl sm:text-5xl md:text-7xl bg-gradient-to-b font-bold from-white to-sky-200 bg-clip-text text-transparent max-w-4xl mx-auto">
+                            Accepting Crypto <br /> Payments Effortlessly
+                        </h1>
 
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                        Create payment links, receive crypto payments, and get
-                        99% forwarded to your wallet. Built for the modern web
-                        with multi-chain support.
-                    </p>
+                        <p className="text-sm sm:text-base md:text-xl text-sky-100/80 max-w-4xl mx-auto leading-loose">
+                            Create payment links, receive crypto payments, and
+                            get 99% forwarded to your wallet. Built for the
+                            modern web with multi-chain support.
+                        </p>
 
-                    <div className="space-x-4">
-                        <Button size="lg" asChild>
-                            <Link href="/auth/signup">
-                                Start Accepting Payments
-                            </Link>
-                        </Button>
-                        <Button variant="outline" size="lg">
-                            View Demo
-                        </Button>
+                        <div className="space-y-4 md:space-x-4">
+                            <Button size="lg" asChild>
+                                <Link href="/auth/signup">
+                                    Start Accepting Payments
+                                </Link>
+                            </Button>
+                            <Button variant="outline" size="lg">
+                                View Demo
+                            </Button>
+                        </div>
                     </div>
                 </div>
-
-                {/* Features */}
-                <div className="grid md:grid-cols-3 gap-8 mt-20">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>⚡ Instant Setup</CardTitle>
-                            <CardDescription>
-                                Create payment links in seconds. No complex
-                                integration required.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-gray-600">
-                                Generate unique payment addresses with our HD
-                                wallet system. Each payment gets its own secure
-                                wallet.
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>🔗 Multi-Chain Support</CardTitle>
-                            <CardDescription>
-                                Accept payments on Ethereum, Polygon, and more
-                                networks.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-gray-600">
-                                Support for USDC, USDT, DAI, and native tokens
-                                across multiple blockchain networks.
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>💰 Low fees</CardTitle>
-                            <CardDescription>
-                                We keep only 0.5% - you get the rest forwarded
-                                automatically.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-gray-600">
-                                Automatic forwarding to your wallet once payment
-                                is confirmed. Transparent, low fees.
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
             </main>
+
+            {/* Partners Section */}
+            <section className="py-12">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {/* Partner logos */}
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }
