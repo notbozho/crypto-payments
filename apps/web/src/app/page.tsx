@@ -1,6 +1,34 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Bitcoin } from "lucide-react";
+import Image from "next/image";
+
+import capsule from "@/assets/partners/capsule.png";
+import command from "@/assets/partners/command.png";
+import hourglass from "@/assets/partners/hourglass.png";
+import layers from "@/assets/partners/layers.png";
+import quotient from "@/assets/partners/quotient.png";
+import sisyphus from "@/assets/partners/sisyphus.png";
+
+import { motion } from "motion/react";
+import { Features } from "./components/sections/Features";
+
+const partners = [
+    capsule,
+    command,
+    hourglass,
+    layers,
+    quotient,
+    sisyphus,
+    capsule,
+    command,
+    hourglass,
+    layers,
+    quotient,
+    sisyphus,
+];
 
 export default function LandingPage() {
     return (
@@ -24,28 +52,28 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <main className="mx-auto p-0 sm:p-3 lg:p-6">
-                <div className="relative min-h-screen flex items-center justify-center rounded-0 rounded-br-3xl rounded-bl-3xl md:rounded-3xl p-8 sm:p-12 lg:p-16 overflow-hidden">
-                    <div className="absolute inset-0 -z-10 rounded-3xl">
+            <main className="mx-auto p-0 sm:p-3 lg:p-5">
+                <div className="relative min-h-screen flex items-center justify-center rounded-0 rounded-br-4xl rounded-bl-4xl md:rounded-4xl p-8 sm:p-12 lg:p-16 overflow-hidden">
+                    <div className="absolute inset-0 -z-10 rounded-4xl">
                         <div className="w-full h-full noise hero-bg"></div>
                     </div>
-                    <div className="text-center space-y-8 ">
-                        <div className="border-primary/50 bg-card/50 mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 shadow-sky-700 shadow-[0_0px_24px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-10">
-                            <span className="text-foreground text-sm tracking-wide">
+                    <div className="text-center space-y-2 md:space-y-8">
+                        <div className="border-primary/50 bg-card/50 mb-4 inline-flex items-center gap-2 rounded-full border px-5 py-1.5 md:py-2 shadow-sky-600 shadow-[0_0px_16px_rgba(255,255,255,0.2)] md:shadow-[0_0px_20px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-8">
+                            <span className="text-foreground text-sm font-light tracking-normal md:tracking-wide md:text-base">
                                 Built for speed and simplicity
                             </span>
                         </div>
-                        <h1 className="text-3xl sm:text-5xl md:text-7xl bg-gradient-to-b font-bold from-white to-sky-200 bg-clip-text text-transparent max-w-4xl mx-auto">
+                        <h1 className="text-3xl md:text-6xl lg:text-7xl leading-tight bg-gradient-to-b font-bold from-white to-sky-200 bg-clip-text text-transparent container mx-auto">
                             Accepting Crypto <br /> Payments Effortlessly
                         </h1>
 
-                        <p className="text-sm sm:text-base md:text-xl text-sky-100/80 max-w-4xl mx-auto leading-loose">
+                        <p className="text-sm sm:text-base md:text-lg text-pretty text-sky-100/80 max-w-4xl mx-auto leading-loose">
                             Create payment links, receive crypto payments, and
                             get 99% forwarded to your wallet. Built for the
                             modern web with multi-chain support.
                         </p>
 
-                        <div className="space-y-4 md:space-x-4">
+                        <div className="space-y-4 md:space-x-4 pt-4 sm:pt-0">
                             <Button size="lg" asChild>
                                 <Link href="/auth/signup">
                                     Start Accepting Payments
@@ -60,13 +88,38 @@ export default function LandingPage() {
             </main>
 
             {/* Partners Section */}
-            <section className="py-12">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {/* Partner logos */}
+            <section className="py-8 md:py-12">
+                <div className="flex justify-center">
+                    <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black,transparent)] container">
+                        <motion.div
+                            className="flex justify-center flex-none gap-28 pr-28"
+                            animate={{
+                                translateX: "-50%",
+                            }}
+                            transition={{
+                                duration: 5,
+                                ease: "linear",
+                                repeat: Infinity,
+                                repeatType: "loop",
+                            }}
+                        >
+                            {partners.map((partner, i) => (
+                                <Image
+                                    key={i}
+                                    src={partner.src}
+                                    alt={partner.src}
+                                    width={150}
+                                    height={150}
+                                    className="h-12 w-auto"
+                                />
+                            ))}
+                        </motion.div>
                     </div>
                 </div>
             </section>
+
+            {/* Features */}
+            <Features />
         </div>
     );
 }

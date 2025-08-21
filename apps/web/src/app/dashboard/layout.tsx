@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 import { Loader2 } from "lucide-react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "./(components)/DashboardSidebar";
-import { DashboardHeader } from "./(components)/DashboardHeader";
+import { DashboardSidebar } from "./components/DashboardSidebar";
+import { DashboardHeader } from "./components/DashboardHeader";
 
 export default function DashboardLayoutPage({
     children,
