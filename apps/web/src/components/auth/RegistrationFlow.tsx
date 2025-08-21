@@ -3,13 +3,19 @@
 import React, { useEffect } from "react";
 import { useRegistrationFlowStore } from "@/store/registrationFlow";
 import { Progress } from "@/components/ui/progress";
-import { GalleryVerticalEnd } from "lucide-react";
+import { Bitcoin } from "lucide-react";
 import { RegisterStep } from "./steps/RegisterStep";
 import { VerifyEmailStep } from "./steps/VerifyEmailStep";
 import TwoFactorSetupStep from "./steps/TwoFactorSetupStep";
 import BackupCodesStep from "./steps/BackupCodesStep";
 import RegistrationCompleteStep from "./steps/RegistrationCompleteStep";
 import ConnectWalletStep from "./steps/ConnectWalletStep";
+import {
+    motion,
+    AnimatePresence,
+    useMotionValue,
+    useSpring,
+} from "framer-motion";
 
 const STEP_LABELS = {
     register: "Create Account",
@@ -53,13 +59,27 @@ export function RegistrationFlow() {
         }
     };
 
+    const stepAnimation = {
+        initial: { opacity: 0, filter: "blur(8px)" },
+        animate: { opacity: 1, filter: "blur(0px)" },
+        exit: { opacity: 0, filter: "blur(8px)" },
+        transition: { duration: 0.4, ease: "easeInOut" },
+    };
+
+    const progress = useMotionValue(STEP_PROGRESS[currentStep]);
+    const spring = useSpring(progress, { stiffness: 80, damping: 30 });
+
+    React.useEffect(() => {
+        progress.set(STEP_PROGRESS[currentStep]);
+    }, [currentStep, progress]);
+
     return (
-        <div className="min-h-screen bg-muted flex flex-col items-center justify-center gap-6 p-6">
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 p-6">
             <div className="w-full max-w-sm flex flex-col gap-6">
                 {/* Logo */}
                 <div className="flex items-center gap-2 self-center font-medium">
                     <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-                        <GalleryVerticalEnd className="size-4" />
+                        <Bitcoin className="size-4" />
                     </div>
                     CryptoPay
                 </div>
@@ -74,16 +94,22 @@ export function RegistrationFlow() {
                             of {Object.keys(STEP_LABELS).length}
                         </span>
                     </div>
-                    <Progress
-                        value={STEP_PROGRESS[currentStep]}
-                        className="h-2"
-                    />
+                    <Progress value={spring.get()} className="h-2" />
                 </div>
 
                 {/* Step Content */}
-                <div className="transition-all duration-300 ease-in-out">
-                    {renderStep()}
-                </div>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={currentStep}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={stepAnimation}
+                        className="transition-all"
+                    >
+                        {renderStep()}
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     );

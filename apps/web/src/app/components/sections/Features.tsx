@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
+import Link from "next/link";
 
 const SmartNotifications = () => {
     return (
@@ -120,11 +121,11 @@ const DynamicDashboard = () => {
                     <span className="text-sm text-zinc-400">20k</span>
                 </div>
                 <div className="flex items-end justify-between h-full gap-2 md:gap-8">
-                    <div className="h-[35%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
-                    <div className="h-[25%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
-                    <div className="h-[45%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
+                    <div className="h-[35%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
+                    <div className="h-[25%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
+                    <div className="h-[45%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
                     <div className="h-full flex flex-col justify-end items-center gap-2">
-                        <span className="text-sky-300">59k</span>
+                        <span className="text-blue-300">59k</span>
                         <motion.div
                             variants={{
                                 rest: { height: "70%" },
@@ -133,12 +134,12 @@ const DynamicDashboard = () => {
                             transition={{
                                 type: "spring",
                             }}
-                            className="opacity-65 bg-gradient-to-t from-secondary to-primary w-12 rounded"
+                            className="opacity-65 bg-gradient-to-t from-secondary to-primary w-12 rounded-lg"
                         />
                     </div>
-                    <div className="h-[55%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
-                    <div className="h-[25%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
-                    <div className="h-[15%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded" />
+                    <div className="h-[55%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
+                    <div className="h-[25%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
+                    <div className="h-[15%] opacity-65 bg-gradient-to-t from-zinc-900 to-zinc-700 w-12 rounded-lg" />
                 </div>
             </div>
         </motion.div>
@@ -149,7 +150,7 @@ export function Features() {
     return (
         <section className="py-24 px-2 sm:px-4 lg:px-8">
             <div className="mx-auto max-w-7xl flex items-center justify-center flex-col space-y-8">
-                <div className="border-primary/50 bg-card/50 mb-4 inline-flex items-center gap-2 rounded-full border px-5 py-1.5 md:py-2 shadow-sky-600 shadow-[0_0px_16px_rgba(255,255,255,0.2)] md:shadow-[0_0px_20px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-8">
+                <div className="border-primary/50 bg-card/50 mb-4 inline-flex items-center gap-2 rounded-full border px-5 py-1.5 md:py-2 shadow-blue-600 shadow-[0_0px_16px_rgba(255,255,255,0.2)] md:shadow-[0_0px_20px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-8">
                     <span className="text-foreground text-sm font-light tracking-normal md:tracking-wide md:text-base">
                         Features
                     </span>
@@ -157,7 +158,7 @@ export function Features() {
                 <h1 className="text-4xl font-semibold max-w-2xl leading-tight text-center text-pretty">
                     Latest advanced technologies to ensure everything you need
                 </h1>
-                <p className="max-w-xl text-center text-sm font-light">
+                <p className="max-w-xl text-center text-zinc-300 font-light">
                     From smart automation to enterprise-grade security.the
                     platform is powered by advanced technology to get your work
                     done.
@@ -170,7 +171,7 @@ export function Features() {
                         className="col-span-1 md:col-span-2 h-full bg-gradient-to-tr from-primary/30 via-background to-primary/20 group bg-background hover-primary/30 relative cursor-pointer flex flex-col md:flex-row justify-between overflow-hidden rounded-xl gap-4 pl-10 pt-12 pb-10 shadow-md transition-all duration-500"
                     >
                         <div className="w-full md:w-1/2 flex flex-col justify-between items-start gap-8 md:gap-20">
-                            <div className="space-y-4 md:space-y-6">
+                            <div className="space-y-4 md:space-y-6 z-20">
                                 <h2 className="text-3xl font-medium">
                                     Dynamic Dashboard
                                 </h2>
@@ -181,9 +182,12 @@ export function Features() {
                                     clear view of your entire business.
                                 </p>
                             </div>
-                            <Button variant="outline">View Dashboard</Button>
+                            <Button variant="outline" className="z-20">
+                                <Link href="/dashboard">View Dashboard</Link>
+                            </Button>
                         </div>
                         <div className="w-1/2">
+                            <div className="absolute inset-0 z-10 h-full backdrop-blur-xl opacity-80 bg-black/20 mask-to-b" />
                             <DynamicDashboard />
                         </div>
                     </motion.div>
@@ -203,6 +207,7 @@ export function Features() {
                                 fast.
                             </p>
                         </div>
+                        <div className="absolute inset-0 z-10 h-full backdrop-blur-xl opacity-80 bg-black/20 mask-to-b" />
                         <div className="">
                             <SmartNotifications />
                         </div>
@@ -215,15 +220,16 @@ export function Features() {
                     >
                         <div className="space-y-6 px-8">
                             <h2 className="text-3xl font-medium">
-                                Smart Notifications
+                                Lightning Speed
                             </h2>
                             <p className="text-sm font-light w-[75%]">
-                                Get relevant updates based on your payments. No
-                                clutter, just the information you need to act
-                                fast.
+                                Experience lightning-fast transactions and
+                                real-time updates, ensuring you never miss a
+                                beat.
                             </p>
                         </div>
-                        <div className="">
+                        <div className="absolute inset-0 z-10 h-full backdrop-blur-xl opacity-80 bg-black/20 mask-to-b" />
+                        <div className="relative">
                             <SmartNotifications />
                         </div>
                     </motion.div>

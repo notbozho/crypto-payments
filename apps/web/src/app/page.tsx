@@ -14,6 +14,9 @@ import sisyphus from "@/assets/partners/sisyphus.png";
 
 import { motion } from "motion/react";
 import { Features } from "./components/sections/Features";
+import { TokensAvailable } from "./components/sections/TokensAvailable";
+import { MeshGradient } from "@paper-design/shaders-react";
+import { Navbar } from "./components/Header";
 
 const partners = [
     capsule,
@@ -34,40 +37,106 @@ export default function LandingPage() {
     return (
         <div className="">
             {/* Header */}
-            <header className="fixed top-0 p-2 left-1/2 transform -translate-x-1/2 z-10 w-full mx-auto md:px-20 md:py-12">
-                <nav className="flex justify-between items-center">
-                    <div className="text-2xl font-medium text-sky-100 flex gap-1 md:gap-2 items-center">
-                        <Bitcoin size={28} />
-                        <div className="hidden md:block">CryptoPay</div>
-                    </div>
-                    <div className="space-x-2 md:space-x-4">
-                        <Button variant="ghost" asChild>
-                            <Link href="/auth/signin">Sign In</Link>
-                        </Button>
-                        <Button variant="outline" asChild>
-                            <Link href="/auth/signup">Get Started</Link>
-                        </Button>
-                    </div>
-                </nav>
-            </header>
+            <Navbar />
 
             {/* Hero Section */}
             <main className="mx-auto p-0 sm:p-3 lg:p-5">
                 <div className="relative min-h-screen flex items-center justify-center rounded-0 rounded-br-4xl rounded-bl-4xl md:rounded-4xl p-8 sm:p-12 lg:p-16 overflow-hidden">
-                    <div className="absolute inset-0 -z-10 rounded-4xl">
-                        <div className="w-full h-full noise hero-bg"></div>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.5 }}
+                        transition={{ duration: 1 }}
+                        className="absolute inset-0 -z-10 rounded-4xl"
+                    >
+                        {/* SVG Filters */}
+                        <svg className="absolute inset-0 w-0 h-0">
+                            <defs>
+                                <filter
+                                    id="glass-effect"
+                                    x="-50%"
+                                    y="-50%"
+                                    width="200%"
+                                    height="200%"
+                                >
+                                    <feTurbulence
+                                        baseFrequency="0.005"
+                                        numOctaves="1"
+                                        result="noise"
+                                    />
+                                    <feDisplacementMap
+                                        in="SourceGraphic"
+                                        in2="noise"
+                                        scale="0.3"
+                                    />
+                                    <feColorMatrix
+                                        type="matrix"
+                                        values="1 0 0 0 0.02
+                      0 1 0 0 0.02
+                      0 0 1 0 0.05
+                      0 0 0 0.9 0"
+                                        result="tint"
+                                    />
+                                </filter>
+                                <filter
+                                    id="gooey-filter"
+                                    x="-50%"
+                                    y="-50%"
+                                    width="200%"
+                                    height="200%"
+                                >
+                                    <feGaussianBlur
+                                        in="SourceGraphic"
+                                        stdDeviation="4"
+                                        result="blur"
+                                    />
+                                    <feColorMatrix
+                                        in="blur"
+                                        mode="matrix"
+                                        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9"
+                                        result="gooey"
+                                    />
+                                    <feComposite
+                                        in="SourceGraphic"
+                                        in2="gooey"
+                                        operator="atop"
+                                    />
+                                </filter>
+                            </defs>
+                        </svg>
+
+                        {/* Background Shaders */}
+                        <MeshGradient
+                            className="absolute inset-0 w-full h-full"
+                            colors={[
+                                "#020d16",
+                                "#030d16",
+                                "#1b2554",
+                                "#27398b",
+                            ]}
+                            speed={1}
+                        />
+                        <MeshGradient
+                            className="absolute inset-0 w-full h-full opacity-60"
+                            colors={[
+                                "#020d16",
+                                // "#4ee8f5",
+                                "#27398b",
+                                "#1b2554",
+                            ]}
+                            speed={0.2}
+                        />
+                    </motion.div>
                     <div className="text-center space-y-2 md:space-y-8">
-                        <div className="border-primary/50 bg-card/50 mb-4 inline-flex items-center gap-2 rounded-full border px-5 py-1.5 md:py-2 shadow-sky-600 shadow-[0_0px_16px_rgba(255,255,255,0.2)] md:shadow-[0_0px_20px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-8">
+                        <div className="border-primary/50 bg-card/50 mb-4 inline-flex items-center gap-2 rounded-full border px-5 py-1.5 md:py-2 shadow-blue-600 shadow-[0_0px_16px_rgba(255,255,255,0.2)] md:shadow-[0_0px_20px_rgba(255,255,255,0.2)] backdrop-blur-sm md:mb-8">
                             <span className="text-foreground text-sm font-light tracking-normal md:tracking-wide md:text-base">
                                 Built for speed and simplicity
                             </span>
                         </div>
-                        <h1 className="text-3xl md:text-6xl lg:text-7xl leading-tight bg-gradient-to-b font-bold from-white to-sky-200 bg-clip-text text-transparent container mx-auto">
+                        <h1 className="text-3xl md:text-6xl lg:text-7xl leading-tight bg-gradient-to-b font-bold from-white to-blue-200 bg-clip-text text-transparent container mx-auto">
                             Accepting Crypto <br /> Payments Effortlessly
                         </h1>
 
-                        <p className="text-sm sm:text-base md:text-lg text-pretty text-sky-100/80 max-w-4xl mx-auto leading-loose">
+                        <p className="text-sm sm:text-base md:text-lg text-pretty text-blue-100/80 max-w-4xl mx-auto leading-loose">
                             Create payment links, receive crypto payments, and
                             get 99% forwarded to your wallet. Built for the
                             modern web with multi-chain support.
@@ -97,7 +166,7 @@ export default function LandingPage() {
                                 translateX: "-50%",
                             }}
                             transition={{
-                                duration: 5,
+                                duration: 8,
                                 ease: "linear",
                                 repeat: Infinity,
                                 repeatType: "loop",
@@ -120,6 +189,9 @@ export default function LandingPage() {
 
             {/* Features */}
             <Features />
+
+            {/* Tokens Available */}
+            <TokensAvailable />
         </div>
     );
 }

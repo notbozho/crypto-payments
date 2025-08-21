@@ -51,7 +51,7 @@
     --card-foreground: oklch(0.13 0.028 261.692);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.13 0.028 261.692);
-    --primary: var(--color-sky-400);
+    --primary: var(--color-blue-500);
     --primary-foreground: oklch(0.985 0.002 247.839);
     --secondary: oklch(0.967 0.003 264.542);
     --secondary-foreground: oklch(0.21 0.034 264.665);
@@ -85,7 +85,7 @@
     --card-foreground: oklch(0.985 0.002 247.839);
     --popover: oklch(0.21 0.034 264.665);
     --popover-foreground: oklch(0.985 0.002 247.839);
-    --primary: var(--color-sky-400);
+    --primary: var(--color-blue-500);
     --primary-foreground: oklch(0.21 0.034 264.665);
     --secondary: oklch(0.278 0.033 256.848);
     --secondary-foreground: oklch(0.985 0.002 247.839);
@@ -95,7 +95,7 @@
     --accent-foreground: oklch(0.985 0.002 247.839);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
-    --input: var(--color-sky-300);
+    --input: var(--color-blue-500);
     --ring: oklch(0.551 0.027 264.364);
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
@@ -121,40 +121,24 @@
     }
 }
 
-.noise::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" /></filter><rect width="100" height="100" filter="url(#f)" /></svg>');
-    opacity: 0.05;
-    pointer-events: none;
+@utility mask-to-t {
+    mask: linear-gradient(
+        to top,
+        transparent 0%,
+        rgba(0, 0, 0, 0.5) 60%,
+        rgba(0, 0, 0, 1) 100%
+    );
 }
 
-.hero-bg {
-    background: radial-gradient(
-            at 13.631465517241379% 12.083333333333334%,
-            #031016 0px,
-            transparent 50%
-        ),
-        radial-gradient(
-            at 0.9159482758620688% 97.08333333333333%,
-            #203e5f 0px,
-            transparent 50%
-        ),
-        radial-gradient(
-            at 68.58836206896551% 61.25000000000001%,
-            #04131e 0px,
-            transparent 50%
-        ),
-        radial-gradient(
-            at 75.48491379310344% 9.791666666666666%,
-            #040008 0px,
-            transparent 50%
-        ),
-        radial-gradient(
-            at 93.91163793103449% 36.45833333333333%,
-            #174765 0px,
-            transparent 50%
-        ),
-        #1a2634;
+@utility mask-to-b {
+    mask: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 0, 0, 0.5) 80%,
+        rgba(0, 0, 0, 1) 100%
+    );
+}
+
+@utility mask-radial {
+    mask: radial-gradient(at center, #ffffff, transparent);
 }
