@@ -9,11 +9,24 @@ import { authConfig, config } from "./config";
 import { emailWorker } from "./queues/emailQueue";
 import { EmailService } from "./services/email.service";
 import { ExpressAuth } from "@auth/express";
+import { createServer } from "http";
+import { setupWebSocketServer } from "./websocket/server";
+import { RealtimePaymentNotifier } from "./websocket/notifier";
+
+declare global {
+    var paymentNotifier: RealtimePaymentNotifier;
+}
 
 const app = express();
+const httpServer = createServer(app);
 
 const emailService = new EmailService();
 emailService.testConnection();
+
+const wsServer = setupWebSocketServer(httpServer);
+const notifier = new RealtimePaymentNotifier(wsServer);
+
+global.paymentNotifier = notifier;
 
 // Middleware
 app.use(helmet());
@@ -61,4 +74,4 @@ process.on("SIGTERM", async () => {
     process.exit(0);
 });
 
-export default app;
+export default httpServer;
