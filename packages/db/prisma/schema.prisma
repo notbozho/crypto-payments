@@ -7,6 +7,77 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== ENUMS =====
+
+enum PaymentStatus {
+  PENDING     // Payment link created, waiting for payment
+  DETECTED    // Payment detected on blockchain, pending confirmation
+  CONFIRMING  // Waiting for block confirmations
+  PROCESSING  // Executing gas pool operations (swap/transfers)
+  COMPLETED   // All operations completed successfully
+  FAILED      // Processing failed, manual intervention needed
+  EXPIRED     // Payment link expired without payment
+  CANCELLED   // Manually cancelled by seller
+}
+
+enum TransactionType {
+  PAYMENT_RECEIVED    // Initial payment to ephemeral wallet
+  SWAP_EXECUTED      // Uniswap token swap
+  SELLER_TRANSFER    // Transfer to seller wallet
+  PLATFORM_FEE       // Gas fee transfer to platform
+  GAS_POOL_REFILL    // Gas pool refill transaction
+  MANUAL_RECOVERY    // Manual fund recovery
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REVERTED
+}
+
+enum ChainStatus {
+  ACTIVE      // Chain is actively supported
+  MAINTENANCE // Temporarily disabled for maintenance
+  DEPRECATED  // Being phased out
+  DISABLED    // Permanently disabled
+}
+
+enum WebhookEventType {
+  PAYMENT_DETECTED
+  PAYMENT_CONFIRMED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  PAYMENT_EXPIRED
+}
+
+enum WebhookStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  RETRYING
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  RECONNECTING
+  BANNED
+}
+
+enum RealtimeEventType {
+  PAYMENT_DETECTED
+  PAYMENT_CONFIRMING
+  PAYMENT_PROCESSING
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  PAYMENT_EXPIRED
+  GAS_PRICE_UPDATE
+  SYSTEM_MAINTENANCE
+}
+
+// ===== CORE MODELS =====
+
 model Seller {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -15,17 +86,28 @@ model Seller {
   walletAddress String?   // Seller's wallet for receiving payments
   emailVerified DateTime?
 
+  // 2FA Settings
   totpSecret    String?
   totpEnabled   Boolean   @default(false)
   backupCodes   BackupCode[]
 
+  // Webhook Settings
+  webhookUrl    String?
+  webhookSecret String?   // For webhook signature verification
+  webhookEvents WebhookEventType[] @default([])
+
+  // Timestamps
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
+  // Relations
   sessions      Session[]
   accounts      Account[]
   paymentLinks  PaymentLink[]
   emailTokens   EmailToken[]
+  webhookLogs   WebhookLog[]
+  wsConnections WebSocketConnection[]
+  realtimeEvents RealtimeEvent[]
   
   @@map("sellers")
 }
@@ -33,7 +115,7 @@ model Seller {
 model BackupCode {
   id        String    @id @default(cuid())
   sellerId  String
-  codeHash  String
+  codeHash  String    // Hashed backup code
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   
@@ -95,35 +177,67 @@ model Session {
   @@map("sessions")
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
+// ===== PAYMENT SYSTEM =====
 
 model PaymentLink {
-  id            String      @id @default(cuid())
+  id            String    @id @default(cuid())
   sellerId      String
-  amount        String      // BigInt as string for precision
-  tokenAddress  String      // '0x0' for native tokens
-  chainType     String      // ChainType enum
-  description   String?
   
-  // Generated random wallet for this payment
-  walletAddress String      @unique
-  privateKey    String      // Encrypted with app secret
+  // Payment Configuration
+  chainId       Int
+  tokenAddress  String?   // null for native token (ETH, MATIC, etc.)
+  amount        String    // Expected amount in token units (use String for precision)
+  amountUSD     Decimal   // USD equivalent at creation time
+  description   String?   // Optional payment description
   
-  status        String      @default("pending") // PaymentStatus enum
-  expiresAt     DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  // Swap Configuration
+  swapToStable  Boolean   @default(false)
+  stablecoinAddress String? // Target stablecoin address if swapping
+  slippageTolerance Decimal @default(5.0) // Percentage (5.0 = 5%)
+  
+  // Gas Management
+  estimatedGasCostUSD    Decimal
+  gasBuffer              Decimal  @default(1.3) // 30% buffer
+  maxGasCostUSD          Decimal  // Maximum gas cost allowed
+  
+  // Ephemeral Wallet
+  walletAddress          String   @unique
+  encryptedPrivateKey    String   // AES encrypted private key
+  keyDerivationSalt      String   // Salt used for key derivation
+  
+  // Payment Detection
+  minimumConfirmations   Int      @default(3)
+  actualAmountReceived   String?  // Actual amount received (when paid)
+  receivedAt            DateTime? // When payment was detected
+  
+  // Status & Lifecycle
+  status        PaymentStatus @default(PENDING)
+  expiresAt     DateTime
+  completedAt   DateTime?
+  errorMessage  String?       // Error details if failed
+  
+  // Metadata
+  userAgent     String?       // Browser/device info
+  ipAddress     String?       // IP address (for fraud detection)
+  referrer      String?       // Referring website
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
   // Relations
-  seller        Seller      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller        Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  chain         SupportedChain @relation("ChainPaymentLinks", fields: [chainId], references: [id])
   transactions  Transaction[]
+  webhookLogs   WebhookLog[]
+  realtimeEvents RealtimeEvent[]
+  
+  // Indexes for performance
+  @@index([chainId, status])
+  @@index([walletAddress])
+  @@index([sellerId, status])
+  @@index([expiresAt])
+  @@index([createdAt])
   
   @@map("payment_links")
 }
@@ -132,34 +246,320 @@ model Transaction {
   id              String    @id @default(cuid())
   paymentLinkId   String
   
-  // Transaction details
-  txHash          String?   @unique
+  // Transaction Identity
+  txHash          String    @unique
+  blockNumber     BigInt
+  blockHash       String
+  transactionIndex Int
+  
+  // Gas Information
+  gasUsed         BigInt
+  gasPrice        BigInt    // In wei
+  gasCostUSD      Decimal?  // USD cost at execution time
+  
+  // Amount Information
+  amount          String    // Transaction amount in token units
+  amountUSD       Decimal?  // USD equivalent at execution time
+  
+  // Transaction Details
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
   fromAddress     String
   toAddress       String
-  amount          String    // Actual amount received
-  tokenAddress    String
-  chainType       String
+  tokenAddress    String?   // null for native token
   
-  // Blockchain data
-  blockNumber     Int?
-  gasUsed         String?
-  gasPrice        String?
+  // Uniswap Swap Details (if applicable)
+  swapDetails     Json?     // Store swap-specific data
   
-  status          String    @default("pending")
-  createdAt       DateTime  @default(now())
+  // Confirmations
+  confirmations   Int       @default(0)
   confirmedAt     DateTime?
+  
+  // Error Handling
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   
   // Relations
   paymentLink     PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
   
+  // Indexes
+  @@index([paymentLinkId])
+  @@index([txHash])
+  @@index([blockNumber])
+  @@index([status, type])
+  @@index([createdAt])
+  
   @@map("transactions")
 }
 
-model ChainState {
-  id            String   @id @default(cuid())
-  chainType     String   @unique
-  lastBlock     Int      @default(0)
-  updatedAt     DateTime @updatedAt
+// ===== GAS POOL MANAGEMENT =====
+
+model SupportedChain {
+  id              Int       @id // Chain ID (1 for Ethereum, 137 for Polygon, etc.)
+  name            String    // Human readable name
+  symbol          String    // Native token symbol (ETH, MATIC, etc.)
+  rpcUrl          String    // Primary RPC endpoint
+  backupRpcUrls   String[]  // Backup RPC endpoints
+  blockExplorer   String    // Etherscan/Polygonscan URL
   
-  @@map("chain_states")
+  // Gas Configuration
+  supportsEIP1559 Boolean   @default(true)
+  avgBlockTime    Int       // Average block time in seconds
+  
+  // Token Addresses
+  wrappedNativeToken String // WETH, WMATIC, etc.
+  usdcAddress        String // USDC contract address
+  uniswapV3Router    String // Uniswap V3 router address
+  uniswapV3Quoter    String // Uniswap V3 quoter address
+  
+  // Status
+  status          ChainStatus @default(ACTIVE)
+  maintenanceMessage String?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  gasPools        GasPool[]
+  paymentLinks    PaymentLink[] @relation("ChainPaymentLinks")
+  
+  @@map("supported_chains")
+}
+
+model GasPool {
+  id              String    @id @default(cuid())
+  chainId         Int       @unique
+  
+  // Wallet Information
+  walletAddress   String    // Gas pool wallet address
+  encryptedPrivateKey String // Encrypted private key
+  
+  // Balance Tracking
+  currentBalance  String    // Current balance in wei (use String for precision)
+  balanceUSD      Decimal   // USD equivalent
+  
+  // Thresholds
+  lowBalanceThreshold  String // Trigger refill when balance drops below this
+  criticalThreshold    String // Stop operations when balance drops below this
+  targetBalance        String // Target balance after refill
+  
+  // Usage Statistics
+  dailyBurnRate   String    // Average daily gas consumption in wei
+  monthlyBurnRate String    // Average monthly consumption
+  totalConsumed   String    // Total gas consumed since inception
+  
+  // Refill Configuration
+  autoRefillEnabled Boolean @default(true)
+  lastRefillAt     DateTime?
+  nextRefillAt     DateTime?
+  
+  // Status
+  isActive        Boolean   @default(true)
+  lastHealthCheck DateTime?
+  errorMessage    String?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  chain           SupportedChain @relation(fields: [chainId], references: [id])
+  refillHistory   GasPoolRefill[]
+  usageHistory    GasPoolUsage[]
+  
+  @@map("gas_pools")
+}
+
+model GasPoolRefill {
+  id              String    @id @default(cuid())
+  gasPoolId       String
+  
+  // Refill Details
+  amount          String    // Amount refilled in wei
+  amountUSD       Decimal   // USD equivalent
+  txHash          String    @unique
+  blockNumber     BigInt
+  
+  // Trigger Information
+  triggerReason   String    // 'auto_refill' | 'manual_refill' | 'emergency_refill'
+  triggeredBy     String?   // User ID if manual
+  
+  // Balance Information
+  balanceBefore   String    // Balance before refill
+  balanceAfter    String    // Balance after refill
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  gasPool         GasPool   @relation(fields: [gasPoolId], references: [id], onDelete: Cascade)
+  
+  @@index([gasPoolId, createdAt])
+  @@map("gas_pool_refills")
+}
+
+model GasPoolUsage {
+  id              String    @id @default(cuid())
+  gasPoolId       String
+  
+  // Usage Details
+  gasUsed         BigInt
+  gasCostUSD      Decimal
+  operationType   TransactionType
+  
+  // Related Transaction
+  transactionId   String?
+  paymentLinkId   String?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  gasPool         GasPool   @relation(fields: [gasPoolId], references: [id], onDelete: Cascade)
+  
+  @@index([gasPoolId, createdAt])
+  @@index([operationType])
+  @@map("gas_pool_usage")
+}
+
+// ===== WEBHOOKS =====
+
+model WebhookLog {
+  id              String    @id @default(cuid())
+  sellerId        String
+  paymentLinkId   String?
+  
+  eventType       WebhookEventType
+  url             String
+  payload         Json
+  
+  status          WebhookStatus @default(PENDING)
+  httpStatus      Int?
+  responseBody    String?
+  deliveredAt     DateTime?
+  
+  attemptCount    Int       @default(0)
+  maxAttempts     Int       @default(5)
+  nextRetryAt     DateTime?
+  
+  errorMessage    String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  seller          Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  paymentLink     PaymentLink? @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  
+  @@index([sellerId, eventType])
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
+  @@map("webhook_logs")
+}
+
+// ===== REAL-TIME WEBSOCKET SYSTEM =====
+
+model WebSocketConnection {
+  id              String    @id @default(cuid())
+  sellerId        String
+  
+  connectionId    String    @unique
+  socketId        String
+  
+  ipAddress       String
+  userAgent       String
+  
+  status          ConnectionStatus @default(CONNECTED)
+  connectedAt     DateTime  @default(now())
+  disconnectedAt  DateTime?
+  lastPingAt      DateTime  @default(now())
+  
+  subscribedEvents RealtimeEventType[] @default([])
+  subscribedPaymentLinks String[] @default([])
+  
+  messageCount    Int       @default(0)
+  lastMessageAt   DateTime?
+  rateLimitHits   Int       @default(0)
+  
+  errorCount      Int       @default(0)
+  lastError       String?
+  lastErrorAt     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  seller          Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  realtimeEvents  RealtimeEvent[]
+  
+  @@index([sellerId, status])
+  @@index([connectionId])
+  @@index([connectedAt])
+  @@index([lastPingAt])
+  @@map("websocket_connections")
+}
+
+model RealtimeEvent {
+  id              String    @id @default(cuid())
+  
+  eventType       RealtimeEventType
+  eventData       Json
+  
+  sellerId        String?
+  paymentLinkId   String?
+  connectionId    String?
+  broadcast       Boolean   @default(false)
+
+  deliveredTo     String[]  @default([])
+  failedDeliveries String[] @default([])
+  totalConnections Int      @default(0)
+
+  processed       Boolean   @default(false)
+  processedAt     DateTime?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  seller          Seller?   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  paymentLink     PaymentLink? @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  connection      WebSocketConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  
+  @@index([eventType, processed])
+  @@index([sellerId, createdAt])
+  @@index([paymentLinkId])
+  @@index([processed, retryCount])
+  @@map("realtime_events")
+}
+
+// ===== ANALYTICS =====
+
+model DailyStats {
+  id              String    @id @default(cuid())
+  date            DateTime  @db.Date
+  chainId         Int
+  
+  totalPayments   Int       @default(0)
+  successfulPayments Int    @default(0)
+  failedPayments  Int       @default(0)
+  totalVolumeUSD  Decimal   @default(0)
+  
+  totalGasUsed    BigInt    @default(0)
+  totalGasCostUSD Decimal   @default(0)
+  avgGasPrice     BigInt    @default(0)
+  
+  avgProcessingTime Int     @default(0)
+  avgConfirmationTime Int   @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([date, chainId])
+  @@index([date])
+  @@map("daily_stats")
 }

@@ -59,7 +59,7 @@ const TestimonialsColumn = (props: {
                 translateX: props.reverse ? "100%" : "-100%",
             }}
             transition={{
-                duration: 2,
+                duration: props.duration || 15,
                 repeat: Infinity,
                 ease: "linear",
                 repeatType: "loop",
