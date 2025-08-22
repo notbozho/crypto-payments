@@ -158,8 +158,8 @@ export function Features() {
                 <h1 className="text-4xl font-semibold max-w-2xl leading-tight text-center text-pretty">
                     Latest advanced technologies to ensure everything you need
                 </h1>
-                <p className="max-w-xl text-center text-zinc-300 font-light">
-                    From smart automation to enterprise-grade security.the
+                <p className="max-w-xl text-center text-zinc-300 font-light pb-8">
+                    From smart automation to enterprise-grade security, the
                     platform is powered by advanced technology to get your work
                     done.
                 </p>

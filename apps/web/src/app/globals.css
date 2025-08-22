@@ -119,6 +119,10 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    .testimonial-card {
+        @apply max-w-md flex-none space-y-20 bg-gradient-to-t from-background to-primary/30 rounded-lg py-8 px-6;
+    }
 }
 
 @utility mask-to-t {

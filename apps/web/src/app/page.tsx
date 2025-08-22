@@ -17,6 +17,7 @@ import { Features } from "./components/sections/Features";
 import { TokensAvailable } from "./components/sections/TokensAvailable";
 import { MeshGradient } from "@paper-design/shaders-react";
 import { Navbar } from "./components/Header";
+import { Testimonials } from "./components/sections/Testimonials";
 
 const partners = [
     capsule,
@@ -192,6 +193,9 @@ export default function LandingPage() {
 
             {/* Tokens Available */}
             <TokensAvailable />
+
+            {/* Testimonials */}
+            <Testimonials />
         </div>
     );
 }

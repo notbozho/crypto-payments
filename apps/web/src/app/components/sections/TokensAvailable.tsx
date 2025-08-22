@@ -42,6 +42,24 @@ export function TokensAvailable() {
         <section className="py-12">
             <div className="mx-auto">
                 <div className="relative container mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{
+                            opacity: 1,
+                        }}
+                        transition={{
+                            duration: 0.5,
+                        }}
+                        className="mask-radial absolute inset-0 -z-20 h-[700px]"
+                    >
+                        <SparklesCore
+                            background="transparent"
+                            minSize={0.5}
+                            maxSize={1.3}
+                            particleDensity={30}
+                            speed={1}
+                        />
+                    </motion.div>
                     <Image
                         src={bgCircle.src}
                         alt="Background Circle"
@@ -68,24 +86,6 @@ export function TokensAvailable() {
                         width={200}
                         height={200}
                     />
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{
-                            opacity: 1,
-                        }}
-                        transition={{
-                            duration: 0.5,
-                        }}
-                        className="mask-radial absolute inset-0 h-[700px]"
-                    >
-                        <SparklesCore
-                            background="transparent"
-                            minSize={0.5}
-                            maxSize={1.3}
-                            particleDensity={30}
-                            speed={1}
-                        />
-                    </motion.div>
                 </div>
                 {/* Text */}
                 <div className="flex flex-col gap-6 items-center">
