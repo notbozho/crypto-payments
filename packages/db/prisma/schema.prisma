@@ -1,3 +1,5 @@
+// packages/db/prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -85,6 +87,8 @@ model Seller {
   passwordHash  String
   walletAddress String?   // Seller's wallet for receiving payments
   emailVerified DateTime?
+
+  role          String   @default("USER")
 
   // 2FA Settings
   totpSecret    String?
@@ -177,6 +181,25 @@ model Session {
   @@map("sessions")
 }
 
+// ===== CHAIN STATUS TRACKING =====
+
+model ChainStatusConfig {
+  id              Int         @id // Chain ID (1, 137, etc.)
+  status          ChainStatus @default(ACTIVE)
+  maintenanceMessage String?
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  paymentLinks    PaymentLink[]
+  gasPools        GasPool[]
+  dailyStats      DailyStats[]
+  
+  @@map("chain_status_config")
+}
+
 // ===== PAYMENT SYSTEM =====
 
 model PaymentLink {
@@ -226,8 +249,8 @@ model PaymentLink {
   updatedAt     DateTime @updatedAt
   
   // Relations
-  seller        Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  chain         SupportedChain @relation("ChainPaymentLinks", fields: [chainId], references: [id])
+  seller        Seller              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  chainStatus   ChainStatusConfig   @relation(fields: [chainId], references: [id])
   transactions  Transaction[]
   webhookLogs   WebhookLog[]
   realtimeEvents RealtimeEvent[]
@@ -299,39 +322,6 @@ model Transaction {
 
 // ===== GAS POOL MANAGEMENT =====
 
-model SupportedChain {
-  id              Int       @id // Chain ID (1 for Ethereum, 137 for Polygon, etc.)
-  name            String    // Human readable name
-  symbol          String    // Native token symbol (ETH, MATIC, etc.)
-  rpcUrl          String    // Primary RPC endpoint
-  backupRpcUrls   String[]  // Backup RPC endpoints
-  blockExplorer   String    // Etherscan/Polygonscan URL
-  
-  // Gas Configuration
-  supportsEIP1559 Boolean   @default(true)
-  avgBlockTime    Int       // Average block time in seconds
-  
-  // Token Addresses
-  wrappedNativeToken String // WETH, WMATIC, etc.
-  usdcAddress        String // USDC contract address
-  uniswapV3Router    String // Uniswap V3 router address
-  uniswapV3Quoter    String // Uniswap V3 quoter address
-  
-  // Status
-  status          ChainStatus @default(ACTIVE)
-  maintenanceMessage String?
-  
-  // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  // Relations
-  gasPools        GasPool[]
-  paymentLinks    PaymentLink[] @relation("ChainPaymentLinks")
-  
-  @@map("supported_chains")
-}
-
 model GasPool {
   id              String    @id @default(cuid())
   chainId         Int       @unique
@@ -369,7 +359,7 @@ model GasPool {
   updatedAt       DateTime  @updatedAt
   
   // Relations
-  chain           SupportedChain @relation(fields: [chainId], references: [id])
+  chainStatus     ChainStatusConfig @relation(fields: [chainId], references: [id])
   refillHistory   GasPoolRefill[]
   usageHistory    GasPoolUsage[]
   
@@ -558,6 +548,8 @@ model DailyStats {
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  
+  chainStatus     ChainStatusConfig @relation(fields: [chainId], references: [id])
   
   @@unique([date, chainId])
   @@index([date])

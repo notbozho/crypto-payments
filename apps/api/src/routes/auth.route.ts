@@ -5,7 +5,7 @@ import { TokenService } from "../services/token.service";
 import {
     addEmailVerificationJob,
     addPasswordResetJob,
-} from "../queues/emailQueue";
+} from "../queues/email.queue";
 import { validateBody } from "../middleware/validation";
 import {
     registerSchema,

@@ -1,12 +1,14 @@
+// api/src/app.ts
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import authRoutes from "./routes/auth.route";
 import totpRoutes from "./routes/totp.route";
-import paymentRoutes from "./routes/payment.route";
+import paymentRoutes from "./routes/payment-link.route";
+import websocketRoutes from "./routes/websocket.route";
 import { authConfig, config } from "./config";
-import { emailWorker } from "./queues/emailQueue";
+import { emailWorker } from "./queues/email.queue";
 import { EmailService } from "./services/email.service";
 import { ExpressAuth } from "@auth/express";
 import { createServer } from "http";
@@ -54,6 +56,8 @@ app.use("/api", authRoutes);
 app.use("/api/totp", totpRoutes);
 
 app.use("/api/payments", paymentRoutes);
+
+app.use("/api/websocket", websocketRoutes);
 
 // Error handler
 app.use(

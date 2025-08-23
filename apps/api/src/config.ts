@@ -94,6 +94,7 @@ export const authConfig: ExpressAuthConfig = {
                     email: seller.email,
                     name: seller.name,
                     requires2FA: seller.totpEnabled,
+                    isAdmin: seller.role === "ADMIN",
                 };
             },
         }),

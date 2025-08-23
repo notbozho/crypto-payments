@@ -20,6 +20,20 @@ export async function authenticatedUser(
     res.status(401).json({ message: "Not Authenticated" });
 }
 
+export async function requireAdmin(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    const session = res.locals.session;
+
+    if (session && session.user && session.user.isAdmin) {
+        return next();
+    }
+
+    res.status(403).json({ message: "Forbidden" });
+}
+
 export async function currentSession(
     req: Request,
     res: Response,

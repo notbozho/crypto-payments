@@ -1,10 +1,4 @@
-export enum PaymentStatus {
-    PENDING = "pending",
-    PAID = "paid",
-    CONFIRMED = "confirmed",
-    FAILED = "failed",
-    EXPIRED = "expired",
-}
+// packages/shared/src/types.ts
 
 export enum ChainType {
     // Mainnets
@@ -22,40 +16,65 @@ export enum ChainType {
     ANVIL = "anvil",
 }
 
+export enum ChainStatus {
+    ACTIVE = "ACTIVE",
+    MAINTENANCE = "MAINTENANCE",
+    DEPRECATED = "DEPRECATED",
+    DISABLED = "DISABLED",
+}
+
+export enum PaymentStatus {
+    PENDING = "PENDING",
+    DETECTED = "DETECTED",
+    CONFIRMING = "CONFIRMING",
+    PROCESSING = "PROCESSING",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED",
+    EXPIRED = "EXPIRED",
+    CANCELLED = "CANCELLED",
+}
+
 export interface SupportedToken {
     symbol: string;
     name: string;
-    address: string; // '0x0' for native tokens
+    address: string;
     decimals: number;
-    chainType: ChainType;
+    isNative: boolean;
+    isStablecoin: boolean;
+    coingeckoId?: string;
 }
 
-export interface PaymentLink {
-    id: string;
-    sellerId: string;
-    amount: string; // BigInt as string
-    tokenAddress: string; // '0x0' for native
-    chainType: ChainType;
-    description?: string;
-    walletAddress: string;
-    privateKey: string; // Encrypted
-    status: PaymentStatus;
-    expiresAt?: Date;
-    createdAt: Date;
+export interface ChainConfig {
+    id: number;
+    type: ChainType;
+    name: string;
+    symbol: string;
+    rpcUrl: string;
+    backupRpcUrls: string[];
+    blockExplorer: string;
+
+    // Gas Configuration
+    supportsEIP1559: boolean;
+    avgBlockTime: number;
+
+    // Contract Addresses
+    wrappedNativeToken: string;
+    usdcAddress: string;
+    uniswapV3Router: string;
+    uniswapV3Quoter: string;
+
+    // Status
+    status: ChainStatus;
+    maintenanceMessage?: string;
+
+    // Tokens
+    supportedTokens: SupportedToken[];
 }
 
-export interface Transaction {
-    id: string;
-    paymentLinkId: string;
-    txHash?: string;
-    fromAddress: string;
-    toAddress: string;
-    amount: string;
-    tokenAddress: string;
-    chainType: ChainType;
-    gasUsed?: string;
-    blockNumber?: number;
-    status: PaymentStatus;
-    createdAt: Date;
-    confirmedAt?: Date;
+export interface GasEstimate {
+    estimatedCostUSD: number;
+    maxCostUSD: number;
+    gasLimit: bigint;
+    gasPrice: bigint;
+    priority?: bigint;
 }

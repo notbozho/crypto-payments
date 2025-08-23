@@ -1,9 +1,12 @@
+// api/src/websocket/server.ts
+
 import { Server as HTTPServer } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 import { verify } from "jsonwebtoken";
 import { prisma } from "@crypto-payments/db";
+import "dotenv/config";
 
 const REDIS_KEYS = {
     CONNECTION: (connectionId: string) => `ws:conn:${connectionId}`,
@@ -93,7 +96,8 @@ export class WebSocketServer {
                     throw new Error("No authentication token provided");
                 }
 
-                const decoded = verify(token, process.env.JWT_SECRET!) as any;
+                console.log("a", process.env.AUTH_SECRET);
+                const decoded = verify(token, process.env.AUTH_SECRET!) as any;
                 const sellerId = decoded.sellerId;
 
                 const isBanned = await this.redis.get(`ban:${sellerId}`);

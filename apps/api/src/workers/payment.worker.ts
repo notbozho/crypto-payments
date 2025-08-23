@@ -1,3 +1,5 @@
+// api/src/workers/payment.worker.ts
+
 import { Job } from "bullmq";
 import { prisma } from "@crypto-payments/db";
 
@@ -10,6 +12,7 @@ interface PaymentData {
 
 export class PaymentWorker {
     async process(job: Job<PaymentData>) {
+        console.log("Processing payment job:", job);
         const { paymentLinkId, txHash, amount } = job.data;
         const notifier = global.paymentNotifier;
 
@@ -28,7 +31,6 @@ export class PaymentWorker {
                 throw new Error("Payment link not found");
             }
 
-            // Create transaction record
             const transaction = await prisma.transaction.create({
                 data: {
                     paymentLinkId,
