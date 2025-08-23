@@ -7,6 +7,8 @@ import Redis from "ioredis";
 import { verify } from "jsonwebtoken";
 import { prisma } from "@crypto-payments/db";
 import "dotenv/config";
+import { decode } from "@auth/core/jwt";
+import { config } from "../config";
 
 const REDIS_KEYS = {
     CONNECTION: (connectionId: string) => `ws:conn:${connectionId}`,
@@ -90,15 +92,26 @@ export class WebSocketServer {
             try {
                 const token =
                     socket.handshake.auth.token ||
-                    socket.handshake.headers.authorization?.split(" ")[1];
+                    socket.handshake.headers.authorization?.split(" ")[1] ||
+                    socket.handshake.headers.cookie
+                        ?.split("authjs.session-token=")[1]
+                        ?.split(";")[0];
 
                 if (!token) {
                     throw new Error("No authentication token provided");
                 }
 
                 console.log("a", process.env.AUTH_SECRET);
-                const decoded = verify(token, process.env.AUTH_SECRET!) as any;
-                const sellerId = decoded.sellerId;
+                const decoded = await decode({
+                    token,
+                    secret: config.authSecret,
+                    salt: "",
+                });
+
+                if (!decoded || !decoded.id) {
+                    throw new Error("Invalid session token");
+                }
+                const sellerId = decoded.id as string;
 
                 const isBanned = await this.redis.get(`ban:${sellerId}`);
                 if (isBanned) {

@@ -168,7 +168,9 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         }));
 
         try {
-            const paymentLinks = await makeApiCall<PaymentLink[]>("/payments");
+            const paymentLinks = await makeApiCall<PaymentLink[]>(
+                "/payments/links"
+            );
 
             set((state) => ({
                 paymentLinks,

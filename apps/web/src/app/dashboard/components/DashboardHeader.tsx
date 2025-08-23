@@ -11,6 +11,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 const mockNotifications = [
     {
@@ -178,14 +179,16 @@ export function DashboardHeader() {
                 <h1 className="text-lg font-semibold">Dashboard</h1>
 
                 <div className="ml-auto flex items-center gap-2">
-                    <Button
-                        onClick={() => setShowCreateLink(true)}
-                        className="flex items-center gap-2"
-                    >
-                        <Plus className="h-4 w-4" />
-                        <span className="hidden sm:inline">
-                            New Payment Link
-                        </span>
+                    <Button>
+                        <Link
+                            href={"/dashboard/create"}
+                            className="flex items-center gap-2"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">
+                                New Payment Link
+                            </span>
+                        </Link>
                     </Button>
 
                     <NotificationsDropdown />
